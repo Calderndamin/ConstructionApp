@@ -1,0 +1,328 @@
+﻿@page "/revisions"
+@using BlazorAppAttempt.Models
+@using Microsoft.EntityFrameworkCore
+@inject IDbContextFactory<BlazorAppAttempt.Data.ApplicationDbContext> DbFactory
+@inject NavigationManager NavigationManager
+@using System.Globalization;
+
+<PageTitle>Revisions</PageTitle>
+
+<div class="container mt-4">
+    <button @onclick="GoToDetailsPage">Go to Details Page</button>
+    <h1 class="text-center">Revisions</h1>
+    <hr />
+    @if (showWarning)
+    {
+        <div class="modal fade show d-block" tabindex="-1" role="dialog">
+            <div class="modal-dialog" role="document">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Warning</h5>
+                        <button type="button" class="close" @onclick="CloseWarning" aria-label="Close">
+                            <span aria-hidden="true">&times;</span>
+                        </button>
+                    </div>
+                    <div class="modal-body">
+                        <p>There are errors in the form.</p>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" @onclick="CloseWarning">Close</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="modal-backdrop fade show"></div>
+    }
+
+    <!-- List of Revisions -->
+    @if (RevisionsList.Count == 0)
+    {
+        <p class="text-center text-muted">No revisions found.</p>
+    }
+    else
+    {
+        <table class="table table-striped table-hover">
+            <thead class="table-dark">
+                <tr>
+                    <th>Revision Number</th>
+                    <th>Date Created</th>
+                    <th>Remarks</th>
+                    <th>Work Aspects</th>
+                    <th>Amount Due</th> <!-- New column for Amount Due -->
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var revision in RevisionsList)
+                {
+                    <tr>
+                        <td>@revision.RevisionNumber</td>
+                        <td>@revision.DateCreated.ToShortDateString()</td>
+                        <td>@revision.Remarks</td>
+                        <td>
+                            <ul>
+                                @foreach (var change in revision.Changes)
+                                {
+                                    <li>
+                                        <strong>@change.WorkAspect.Name</strong>: Progress from
+                                        @((int)change.OldProgress)% to @((int)change.NewProgress)%
+                                    </li>
+                                }
+                            </ul>
+                        </td>
+                        <td>@revision.AmountDue.ToString("C", crCulture)</td> <!-- Display Amount Due -->
+                        <td>
+                            <button class="btn btn-danger" @onclick="() => DeleteRevision(revision.RevisionID)">Delete</button>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
+
+    <div class="row">
+        <hr />
+        <div class="col-md-6">
+            <!-- Add New Revision Form -->
+            <h3>Add New Revision</h3>
+            <EditForm Model="NewRevision" OnValidSubmit="AddRevision">
+                <DataAnnotationsValidator />
+                <ValidationSummary class="text-danger" />
+
+                <div class="mb-3">
+                    <label for="revisionNumber" class="form-label">Revision Number: @NewRevision.RevisionNumber</label>  
+                </div>
+                <div class="mb-3">
+                    <label for="remarks" class="form-label">Remarks:</label>
+                    <InputText id="remarks" @bind-Value="NewRevision.Remarks" class="form-control" />
+                    <ValidationMessage For="() => NewRevision.Remarks" class="text-danger" />
+                </div>
+
+                <div class="mb-3">
+                    <label for="dateCreated" class="form-label">Date Created:</label>
+                    <InputDate id="dateCreated" @bind-Value="NewRevision.DateCreated" class="form-control" required />
+                    <ValidationMessage For="() => NewRevision.DateCreated" class="text-danger" />
+                </div>
+
+                
+            </EditForm>
+        </div>
+
+        <div class="col-md-6">
+            <!-- Table for Work Aspects -->
+            <h5>Work Aspects</h5>
+            <table class="table table-striped table-hover">
+                <thead class="table-dark">
+                    <tr>
+                        <th>Name</th>
+                        <th>Current Progress</th>
+                        <th>New Progress</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var workAspect in WorkAspects)
+                    {
+                        <tr>
+                            <td>@workAspect.Name</td>
+                            <td>@((int)workAspect.Progress)%</td>
+                            <td>
+                                <InputNumber @bind-Value="workAspect.NewProgress" class="form-control" min="0" max="100" @oninput="@(e => ValidateProgress(workAspect))" />
+                                @if (workAspect.ShowWarning)
+                                {
+                                    <div class="text-danger">Warning: New progress is lower than current progress!</div>
+                                }
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+            <button type="submit" @onclick="() => AddRevision()" class="btn btn-primary" disabled="@IsSubmitDisabled">Add Revision</button>
+        </div>
+
+    </div>
+</div>
+
+@code {
+    [SupplyParameterFromQuery]
+    public int ContractID { get; set; }
+
+    CultureInfo crCulture = new CultureInfo("es-CR"); // Costa Rica culture
+
+    private List<Revision> RevisionsList { get; set; } = new();
+    private Revision NewRevision { get; set; } = new()
+        {
+            DateCreated = DateTime.Now,
+        };
+    private List<WorkAspectViewModel> WorkAspects { get; set; } = new();
+    private bool IsSubmitDisabled { get; set; } = false;
+
+    protected override void OnInitialized()
+    {
+        using var context = DbFactory.CreateDbContext();
+        RevisionsList = context.Revisions
+            .Include(r => r.Contract)
+            .Include(r => r.Changes)
+            .ThenInclude(c => c.WorkAspect)
+            .Where(r => r.ContractID == ContractID)
+            .ToList();
+
+        WorkAspects = context.WorkAspects
+            .Where(wa => wa.ContractID == ContractID)
+            .Select(wa => new WorkAspectViewModel
+                {
+                    WorkAspectID = wa.WorkAspectID,
+                    Name = wa.Name,
+                    Progress = wa.Progress,
+                    NewProgress = wa.Progress
+                })
+            .ToList();
+
+        NewRevision.RevisionNumber = RevisionsList.Count + 1;
+
+        // Call the UpdateOverallProgress() method of the Contract class
+        var contract = context.Contracts.Find(ContractID);
+        if (contract != null)
+        {
+            contract.UpdateOverallProgress();
+            context.SaveChanges();
+        }
+    }
+
+    private void AddRevision()
+    {
+        using var context = DbFactory.CreateDbContext();
+        NewRevision.ContractID = ContractID;
+
+        // Fetch the contract to get the total amount
+        var contract = context.Contracts.Find(ContractID);
+        if (contract != null)
+        {
+            
+        }
+
+        context.Revisions.Add(NewRevision);
+        context.SaveChanges();
+
+        // Update the progress of each work aspect and create WorkAspectChange entries
+        foreach (var workAspect in WorkAspects)
+        {
+            if (workAspect.Progress > workAspect.NewProgress)
+            {
+                // If necessary, handle the logic for reducing progress
+            }
+            else
+            {
+                var change = new WorkAspectChange
+                    {
+                        WorkAspectID = workAspect.WorkAspectID,
+                        OldProgress = workAspect.Progress,
+                        NewProgress = workAspect.NewProgress,
+                        RevisionID = NewRevision.RevisionID
+                    };
+                context.WorkAspectChanges.Add(change);
+
+                var existingWorkAspect = context.WorkAspects.Find(workAspect.WorkAspectID);
+                if (existingWorkAspect != null)
+                {
+                    existingWorkAspect.Progress = workAspect.NewProgress;
+                }
+            }
+        }
+        context.SaveChanges();
+
+        // Reset the NewRevision object for the next addition
+        NewRevision = new()
+            {
+                DateCreated = DateTime.Now,
+                RevisionNumber = RevisionsList.Count + 1
+            };
+        NavigationManager.NavigateTo($"/revisions?contractID={ContractID}", forceLoad: true);
+    }
+
+    private void DeleteRevision(int revisionID)
+    {
+        using var context = DbFactory.CreateDbContext();
+        var revision = context.Revisions
+            .Include(r => r.Changes)
+            .FirstOrDefault(r => r.RevisionID == revisionID);
+
+        if (revision != null && revision.RevisionNumber == RevisionsList.Max(r => r.RevisionNumber))
+        {
+            // Update the progress of each work aspect to its previous value
+            foreach (var change in revision.Changes)
+            {
+                var workAspect = context.WorkAspects.Find(change.WorkAspectID);
+                if (workAspect != null)
+                {
+                    workAspect.Progress = change.OldProgress;
+                }
+            }
+
+            // Remove the changes and the revision
+            context.WorkAspectChanges.RemoveRange(revision.Changes);
+            context.Revisions.Remove(revision);
+            context.SaveChanges();
+
+            // Refresh the page
+            NavigationManager.NavigateTo($"/revisions?contractID={ContractID}", forceLoad: true);
+        }
+    }
+
+    private Task ValidateProgress(WorkAspectViewModel workAspect)
+    {
+        // Show a warning if the new progress is less than the current progress
+        if (workAspect.NewProgress < workAspect.Progress)
+        {
+            workAspect.ShowWarning = true;
+        }
+        else
+        {
+            workAspect.ShowWarning = false;
+        }
+        StateHasChanged();
+        return Task.CompletedTask;
+    }
+
+    private void GoToDetailsPage()
+    {
+        NavigationManager.NavigateTo($"/contracts/details?contractid={ContractID}");
+    }
+
+    private bool showWarning = false;
+
+    private void ShowWarning()
+    {
+        showWarning = true;
+    }
+
+    private void CloseWarning()
+    {
+        showWarning = false;
+    }
+
+    private class WorkAspectViewModel
+    {
+        public int WorkAspectID { get; set; }
+        public string Name { get; set; }
+        public decimal Progress { get; set; }
+        public decimal NewProgress { get; set; }
+        public bool ShowWarning { get; set; }
+    }
+}
+
+<style>
+    .modal {
+        display: block;
+        background: rgba(0, 0, 0, 0.5);
+    }
+
+    .modal-backdrop {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0, 0, 0, 0.5);
+        z-index: 1040;
+    }
+</style>

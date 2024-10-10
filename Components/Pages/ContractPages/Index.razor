@@ -1,0 +1,130 @@
+﻿@page "/contracts"
+@using Microsoft.EntityFrameworkCore
+@using Microsoft.AspNetCore.Components.QuickGrid
+@using BlazorAppAttempt.Models
+@using BlazorAppAttempt.Data
+@implements IAsyncDisposable
+@inject IDbContextFactory<BlazorAppAttempt.Data.ApplicationDbContext> DbFactory
+@inject NavigationManager NavigationManager
+@using System.Globalization
+
+<PageTitle>Active Contracts</PageTitle>
+
+<div class="container mt-4">
+    <h1 class="text-center">Overview of Contracts</h1>
+    <hr />
+
+    <div class="row">
+        @if (Contracts != null)
+        {
+            @if (Contracts.Any())
+            {
+                @foreach (var contract in Contracts)
+                {
+                    if (contract?.Subcontractor != null && contract?.Project != null)
+                    {
+                        <div class="col-md-4 mb-4">
+                            <div class="contract-card p-3">
+                                <h4>@contract.Subcontractor.Name</h4>
+                                <p><strong>Amount:</strong> @contract.Amount.ToString("C", crCulture)</p>
+                                <p><strong>Start Date:</strong> @contract.StartDate.ToShortDateString()</p>
+                                <p><strong>Project:</strong> @contract.Project.ProjectName</p>
+                                <p><strong>Due Balance:</strong> @contract.DueBalance.ToString("C", crCulture)</p>
+                                <div class="progress">
+                                    <div class="progress-bar" role="progressbar" style="width:@contract.Progress%" aria-valuenow="@contract.Progress" aria-valuemin="0" aria-valuemax="100">@contract.Progress%</div>
+                                </div>
+                                <div class="text-right mt-2">
+                                    <button class="btn btn-primary" @onclick="() => OnDetailsClick(contract.ContractID)">View Details</button>
+                                </div>
+                            </div>
+                        </div>
+                    }
+                }
+            }
+            else
+            {
+                <p class="text-center text-muted">No contracts available.</p>
+            }
+        }
+    </div>
+</div>
+
+@code {
+    private ApplicationDbContext context = default!;
+    private List<Contract>? Contracts;
+    CultureInfo crCulture = new CultureInfo("es-CR"); // Costa Rica culture
+
+    protected override async Task OnInitializedAsync()
+    {
+        context = await DbFactory.CreateDbContextAsync();
+        Contracts = await context.Contracts
+            .Include(c => c.Project)
+            .Include(c => c.Subcontractor)
+            .ToListAsync();
+    }
+
+    public async ValueTask DisposeAsync() => await context.DisposeAsync();
+
+    private void OnDetailsClick(int contractID)
+    {
+        NavigationManager.NavigateTo($"/contracts/details?contractid={contractID}");
+    }
+}
+
+<style>
+    .container {
+        max-width: 1200px;
+    }
+
+    .contract-card {
+        border-radius: 20px;
+        background-color: #f8f9fa;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        transition: transform 0.2s;
+    }
+
+        .contract-card:hover {
+            transform: scale(1.02);
+        }
+
+        .contract-card h4 {
+            margin-bottom: 10px;
+        }
+
+        .contract-card .progress {
+            margin-top: 10px;
+        }
+
+        .contract-card .progress-bar {
+            background-color: #ff9100;
+        }
+
+    .text-center {
+        text-align: center;
+    }
+
+    .text-muted {
+        color: #6c757d;
+    }
+
+    .mt-2 {
+        margin-top: 0.5rem;
+    }
+
+    .mt-4 {
+        margin-top: 1.5rem;
+    }
+
+    .mb-4 {
+        margin-bottom: 1.5rem;
+    }
+
+    .btn-primary {
+        background-color: #007bff;
+        color: white;
+    }
+
+        .btn-primary:hover {
+            opacity: 0.8;
+        }
+</style>

@@ -1,0 +1,124 @@
+﻿@page "/contracts/edit"
+@using Microsoft.EntityFrameworkCore
+@using BlazorAppAttempt.Models
+@inject IDbContextFactory<BlazorAppAttempt.Data.ApplicationDbContext> DbFactory
+@inject NavigationManager NavigationManager
+
+<PageTitle>Edit</PageTitle>
+
+<h1>Edit</h1>
+
+<h2>Contract</h2>
+<hr />
+@if (Contract is null)
+{
+    <p><em>Loading...</em></p>
+}
+else
+{
+    <div class="row">
+        <div class="col-md-4">
+            <EditForm method="post" Model="Contract" OnValidSubmit="UpdateContract" FormName="edit" Enhance>
+                <DataAnnotationsValidator />
+                <ValidationSummary />
+                <input type="hidden" name="Contract.ContractID" value="@Contract.ContractID" />
+                <div class="mb-3">
+                    <label for="projectid" class="form-label">ProjectID:</label>
+                    <InputNumber id="projectid" @bind-Value="Contract.ProjectID" class="form-control" />
+                    <ValidationMessage For="() => Contract.ProjectID" class="text-danger" />
+                </div>
+                <div class="mb-3">
+                    <label for="subcontractorid" class="form-label">SubcontractorID:</label>
+                    <InputNumber id="subcontractorid" @bind-Value="Contract.SubcontractorID" class="form-control" />
+                    <ValidationMessage For="() => Contract.SubcontractorID" class="text-danger" />
+                </div>
+                <div class="mb-3">
+                    <label for="contractamount" class="form-label">ContractAmount:</label>
+                    <InputNumber id="contractamount" @bind-Value="Contract.Amount" class="form-control" />
+                    <ValidationMessage For="() => Contract.Amount" class="text-danger" />
+                </div>
+                <div class="mb-3">
+                    <label for="duebalance" class="form-label">DueBalance:</label>
+                    <InputNumber id="duebalance" @bind-Value="Contract.DueBalance" class="form-control" />
+                    <ValidationMessage For="() => Contract.DueBalance" class="text-danger" />
+                </div>
+                <div class="mb-3">
+                    <label for="progress" class="form-label">Progress:</label>
+                    <InputNumber id="progress" @bind-Value="Contract.Progress" class="form-control" />
+                    <ValidationMessage For="() => Contract.Progress" class="text-danger" />
+                </div>
+                <div class="mb-3">
+                    <label for="startdate" class="form-label">StartDate:</label>
+                    <InputDate id="startdate" @bind-Value="Contract.StartDate" class="form-control" />
+                    <ValidationMessage For="() => Contract.StartDate" class="text-danger" />
+                </div>
+                <div class="mb-3">
+                    <label for="enddate" class="form-label">EndDate:</label>
+                    <InputDate id="enddate" @bind-Value="Contract.EndDate" class="form-control" />
+                    <ValidationMessage For="() => Contract.EndDate" class="text-danger" />
+                </div>
+                <div class="mb-3">
+                    <label for="othercontractdetails" class="form-label">OtherContractDetails:</label>
+                    <InputText id="othercontractdetails" @bind-Value="Contract.OtherContractDetails" class="form-control" />
+                    <ValidationMessage For="() => Contract.OtherContractDetails" class="text-danger" />
+                </div>
+                <button type="submit" class="btn btn-primary">Save</button>
+            </EditForm>
+        </div>
+    </div>
+}
+
+<div>
+    <a href="/contracts">Back to List</a>
+</div>
+
+@code {
+    [SupplyParameterFromQuery]
+    private int ContractID { get; set; }
+
+    [SupplyParameterFromForm]
+    private Contract? Contract { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        using var context = DbFactory.CreateDbContext();
+        Contract ??= await context.Contracts.FirstOrDefaultAsync(m => m.ContractID == ContractID);
+
+        if (Contract is null)
+        {
+            NavigationManager.NavigateTo("notfound");
+        }
+    }
+
+    // To protect from overposting attacks, enable the specific properties you want to bind to.
+    // For more information, see https://learn.microsoft.com/aspnet/core/blazor/forms/#mitigate-overposting-attacks.
+    private async Task UpdateContract()
+    {
+        using var context = DbFactory.CreateDbContext();
+        context.Attach(Contract!).State = EntityState.Modified;
+
+        try
+        {
+            await context.SaveChangesAsync();
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            if (!ContractExists(Contract!.ContractID))
+            {
+                NavigationManager.NavigateTo("notfound");
+            }
+            else
+            {
+                throw;
+            }
+        }
+
+        NavigationManager.NavigateTo("/contracts");
+    }
+
+    private bool ContractExists(int contractid)
+    {
+        using var context = DbFactory.CreateDbContext();
+        return context.Contracts.Any(e => e.ContractID == contractid);
+    }
+}

@@ -1,0 +1,195 @@
+﻿@page "/contracts/details"
+@using Microsoft.EntityFrameworkCore
+@using BlazorAppAttempt.Models
+@inject IDbContextFactory<BlazorAppAttempt.Data.ApplicationDbContext> DbFactory
+@inject NavigationManager NavigationManager
+@using System.Globalization;
+
+<PageTitle>Details</PageTitle>
+
+<div class="container mt-4">
+    <h1 class="text-center">Contract Details</h1>
+    <hr />
+    @if (contract is null)
+    {
+        <p class="loading-text"><em>Loading...</em></p>
+    }
+    else
+    {
+        <div class="contract-header">
+            <h4>@contract.Subcontractor?.Name</h4>
+            <p><strong>Contract Amount:</strong> @contract.Amount.ToString("C", crCulture) (@ContractAmountUSDString)</p>
+            <p><strong>Contract Details:</strong> @contract.OtherContractDetails</p>
+            <p><strong>Project:</strong> @contract.Project?.ProjectName</p>
+            <div class="progress">
+                <div class="progress-bar" role="progressbar" style="width:@contract.Progress%" aria-valuenow="@contract.Progress" aria-valuemin="0" aria-valuemax="100">@contract.Progress%</div>
+            </div>
+            <p><strong>Due Balance:</strong> @contract.DueBalance.ToString("C", crCulture)</p>
+        </div>
+
+        <div class="progress-section">
+            <h4>Work Aspects</h4>
+            <table class="table table-striped table-hover">
+                <thead class="table-dark">
+                    <tr>
+                        <th>Work Aspect</th>
+                        <th>Weight</th>
+                        <th style="width: 450px;">Current Progress</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (contract.WorkAspects != null && contract.WorkAspects.Any())
+                    {
+                        @foreach (var tracking in contract.WorkAspects)
+                        {
+                            <tr>
+                                <td>@tracking.Name</td>
+                                <td>@tracking.Weight%</td>
+                                <td>
+                                    <div class="progress">
+                                        <div class="progress-bar" role="progressbar" style="width:@tracking.Progress%" aria-valuenow="@tracking.Progress" aria-valuemin="0" aria-valuemax="100">@tracking.Progress%</div>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    }
+                    else
+                    {
+                        <tr>
+                            <td colspan="3" class="text-center text-muted">No work aspects available.</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+
+        <div class="revisions-section">
+            <hr />
+            <h4>Revisions</h4>
+            <div class="text-right mt-2">
+                <button class="btn btn-primary" @onclick="() => OnDetailsClick(ContractID)">View Revisions</button>
+            </div>
+        </div>
+
+        <div class="summary-section">
+            <hr />
+            <h4>Summary</h4>
+            <p><strong>Total Paid:</strong> @TotalPaid.ToString("C", crCulture)</p>
+            <p><strong>Amount Due:</strong> @contract?.DueBalance.ToString("C", crCulture)</p>
+        </div>
+
+        <div class="text-right mt-2">
+            <button class="btn btn-danger" @onclick="() => OnDeleteClick(ContractID)">Delete Contract</button>
+        </div>
+    }
+</div>
+
+@code {
+    private Contract? contract;
+    private string textareaValue = string.Empty;
+
+    private decimal ContractAmountUSD => contract.Amount / 520;
+    private string ContractAmountUSDString => ContractAmountUSD.ToString("C");
+    private decimal TotalPaid = 0;
+
+    CultureInfo crCulture = new CultureInfo("es-CR"); // Costa Rica culture
+
+    [SupplyParameterFromQuery]
+    private int ContractID { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        using var context = DbFactory.CreateDbContext();
+        contract = await context.Contracts
+            .Include(c => c.Project)
+            .Include(c => c.Subcontractor)
+            .Include(c => c.WorkAspects)
+            .Include(c => c.Revisions)
+            .FirstOrDefaultAsync(m => m.ContractID == ContractID);
+
+        if (contract is null)
+        {
+            NavigationManager.NavigateTo("notfound");
+        }
+        else
+        {
+            Console.WriteLine($"Contract loaded: {contract.Amount}, Subcontractor: {contract.Subcontractor?.Name}, Project: {contract.Project?.ProjectName}");
+        }
+        
+    }
+
+    private void OnDetailsClick(int contractID)
+    {
+        NavigationManager.NavigateTo($"/revisions?contractid={contractID}");
+    }
+
+    private void OnDeleteClick(int contractID)
+    {
+        NavigationManager.NavigateTo($"/contracts/delete?contractid={contractID}");
+    }
+}
+
+<style>
+    .contract-header {
+        background-color: #f5f5f5;
+        padding: 15px;
+        border-radius: 5px;
+        margin-bottom: 20px;
+    }
+
+    .progress-bar {
+        background-color: #4caf50;
+    }
+
+    .progress {
+        margin-bottom: 15px; /* Adjust the value as needed */
+    }
+
+    .table {
+        background-color: white;
+        border-radius: 5px;
+        box-shadow: 0px 2px 8px rgba(0, 0, 0, 0.1);
+    }
+
+        .table th, .table td {
+            text-align: center;
+        }
+
+    .table-striped tbody tr:nth-of-type(odd) {
+        background-color: #f9f9f9;
+    }
+
+    .btn {
+        font-size: 16px;
+        padding: 10px 15px;
+    }
+
+    .btn-primary {
+        background-color: #007bff;
+        color: white;
+    }
+
+    .btn-danger {
+        background-color: #dc3545;
+        color: white;
+    }
+
+        .btn-primary:hover, .btn-danger:hover {
+            opacity: 0.8;
+        }
+
+    .loading-text {
+        color: #999;
+        font-style: italic;
+        text-align: center;
+        margin: 20px 0;
+    }
+
+    .summary-section, .revisions-section {
+        margin-top: 20px;
+    }
+
+    .text-right {
+        text-align: right;
+    }
+</style>
