@@ -66,9 +66,99 @@
         <div class="revisions-section">
             <hr />
             <h4>Revisions</h4>
+
+            <!-- List of Revisions -->
+            @if (RevisionsList.Count == 0)
+            {
+                <p class="text-center text-muted">No revisions found.</p>
+            }
+            else
+            {
+                <table class="table table-striped table-hover">
+                    <thead class="table-dark">
+                        <tr>
+                            <th>Revision Number</th>
+                            <th>Date Created</th>
+                            <th>Remarks</th>
+                            <th>Amount Due</th> <!-- New column for Amount Due -->
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var revision in RevisionsList)
+                        {
+                            <tr>
+                                <td>@revision.RevisionNumber</td>
+                                <td>@revision.DateCreated.ToShortDateString()</td>
+                                <td>@revision.Remarks</td>
+                                <td>@revision.AmountDue.ToString("C", crCulture)</td> <!-- Display Amount Due -->
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            }
+
             <div class="text-right mt-2">
                 <button class="btn btn-primary" @onclick="() => OnDetailsClick(ContractID)">View Revisions</button>
             </div>
+        </div>
+
+        <div class="transaction-section">
+            <hr />
+            <h4>Transactions</h4>
+            <div class="col-md-6">
+                <h3>Transactions</h3>
+                <table class="table table-striped table-hover">
+                    <thead class="table-dark">
+                        <tr>
+                            <th>Type</th>
+                            <th>Amount</th>
+                            <th>Description</th>
+                            <th>Date Created</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var transaction in Transactions)
+                        {
+                            <tr>
+                                <td>@transaction.Type</td>
+                                <td>@transaction.Amount.ToString("C", crCulture)</td>
+                                <td>@transaction.Description</td>
+                                <td>@transaction.DateCreated.ToShortDateString()</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+                <div class="col-md-6">
+                    <h3>Add Transaction</h3>
+                    <EditForm Model="NewTransaction" OnValidSubmit="AddTransaction">
+                        <DataAnnotationsValidator />
+                        <ValidationSummary class="text-danger" />
+
+                        <div class="mb-3">
+                            <label for="amount" class="form-label">Amount:</label>
+                            <InputNumber id="amount" @bind-Value="NewTransaction.Amount" class="form-control" />
+                            <ValidationMessage For="() => NewTransaction.Amount" class="text-danger" />
+                        </div>
+                        <div class="mb-3">
+                            <label for="description" class="form-label">Description:</label>
+                            <InputText id="description" @bind-Value="NewTransaction.Description" class="form-control" />
+                            <ValidationMessage For="() => NewTransaction.Description" class="text-danger" />
+                        </div>
+                        <div class="mb-3">
+                            <label for="type" class="form-label">Type:</label>
+                            <InputSelect id="type" @bind-Value="NewTransaction.Type" class="form-control">
+                                <option value="Credit">Credit</option>
+                                <option value="Debit">Debit</option>
+                            </InputSelect>
+                            <ValidationMessage For="() => NewTransaction.Type" class="text-danger" />
+                        </div>
+                        <button type="submit" class="btn btn-primary">Add Transaction</button>
+                    </EditForm>
+                </div>
+
+            </div>
+
+
         </div>
 
         <div class="summary-section">
@@ -81,6 +171,7 @@
         <div class="text-right mt-2">
             <button class="btn btn-danger" @onclick="() => OnDeleteClick(ContractID)">Delete Contract</button>
         </div>
+        <hr />
     }
 </div>
 
@@ -92,10 +183,15 @@
     private string ContractAmountUSDString => ContractAmountUSD.ToString("C");
     private decimal TotalPaid = 0;
 
+    private List<Transaction> Transactions { get; set; } = new();
+    private Transaction NewTransaction { get; set; } = new();
+
     CultureInfo crCulture = new CultureInfo("es-CR"); // Costa Rica culture
 
     [SupplyParameterFromQuery]
     private int ContractID { get; set; }
+
+    private List<Revision> RevisionsList => contract?.Revisions.ToList() ?? new List<Revision>();
 
     protected override async Task OnInitializedAsync()
     {
@@ -105,6 +201,7 @@
             .Include(c => c.Subcontractor)
             .Include(c => c.WorkAspects)
             .Include(c => c.Revisions)
+            .ThenInclude(r => r.Changes)
             .FirstOrDefaultAsync(m => m.ContractID == ContractID);
 
         if (contract is null)
@@ -114,6 +211,7 @@
         else
         {
             Console.WriteLine($"Contract loaded: {contract.Amount}, Subcontractor: {contract.Subcontractor?.Name}, Project: {contract.Project?.ProjectName}");
+            TotalPaid = contract.Amount - contract.DueBalance;
         }
         
     }
@@ -126,6 +224,23 @@
     private void OnDeleteClick(int contractID)
     {
         NavigationManager.NavigateTo($"/contracts/delete?contractid={contractID}");
+    }
+
+    private void AddTransaction()
+    {
+        using var context = DbFactory.CreateDbContext();
+        NewTransaction.DateCreated = DateTime.Now;
+        context.Transactions.Add(NewTransaction);
+        context.SaveChanges();
+        LoadTransactions();
+    }
+
+    private void LoadTransactions()
+    {
+        using var context = DbFactory.CreateDbContext();
+        Transactions = context.Transactions
+            .Where(t => t.ContractID == ContractID)
+            .ToList();
     }
 }
 

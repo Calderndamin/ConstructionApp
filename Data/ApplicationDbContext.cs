@@ -19,6 +19,8 @@ namespace BlazorAppAttempt.Data
         public DbSet<Revision> Revisions { get; set; }
         public DbSet<WorkAspectChange> WorkAspectChanges { get; set; }
 
+        public DbSet<Transaction> Transactions { get; set; }
+
         // Configure the entity mappings
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {

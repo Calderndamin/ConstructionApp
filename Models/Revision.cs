@@ -20,17 +20,11 @@
         {
             if (Contract != null && Changes != null)
             {
-                decimal currentprogress = Contract.Progress;
-
                 // Calculate the total progress change across all work aspects in this revision
                 decimal totalProgressChange = Changes.Sum(change => (change.NewProgress - change.OldProgress ) * change.WorkAspect.Weight);
 
                 // Calculate the amount due based on the contract's total amount and the total progress change
-                AmountDue = Contract.Amount * (totalProgressChange / 100);
-
-                Console.WriteLine(totalProgressChange);
-                Console.WriteLine(currentprogress);
-                Console.WriteLine(AmountDue);
+                AmountDue = Contract.Amount * (totalProgressChange / 10000);
             }
             return decimal.Round(AmountDue, 2);
         }

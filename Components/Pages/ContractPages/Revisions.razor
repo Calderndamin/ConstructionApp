@@ -11,27 +11,10 @@
     <button @onclick="GoToDetailsPage">Go to Details Page</button>
     <h1 class="text-center">Revisions</h1>
     <hr />
+
     @if (showWarning)
     {
-        <div class="modal fade show d-block" tabindex="-1" role="dialog">
-            <div class="modal-dialog" role="document">
-                <div class="modal-content">
-                    <div class="modal-header">
-                        <h5 class="modal-title">Warning</h5>
-                        <button type="button" class="close" @onclick="CloseWarning" aria-label="Close">
-                            <span aria-hidden="true">&times;</span>
-                        </button>
-                    </div>
-                    <div class="modal-body">
-                        <p>There are errors in the form.</p>
-                    </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" @onclick="CloseWarning">Close</button>
-                    </div>
-                </div>
-            </div>
-        </div>
-        <div class="modal-backdrop fade show"></div>
+        <WarningModal Title="Warning" Message="There are errors in the form." OnClose="CloseWarning" />
     }
 
     <!-- List of Revisions -->
@@ -94,7 +77,7 @@
                 </div>
                 <div class="mb-3">
                     <label for="remarks" class="form-label">Remarks:</label>
-                    <InputText id="remarks" @bind-Value="NewRevision.Remarks" class="form-control" />
+                    <InputText id="remarks" @bind-Value="NewRevision.Remarks" placeholder ="some progress made..." class="form-control" />
                     <ValidationMessage For="() => NewRevision.Remarks" class="text-danger" />
                 </div>
 
@@ -126,11 +109,7 @@
                             <td>@workAspect.Name</td>
                             <td>@((int)workAspect.Progress)%</td>
                             <td>
-                                <InputNumber @bind-Value="workAspect.NewProgress" class="form-control" min="0" max="100" @oninput="@(e => ValidateProgress(workAspect))" />
-                                @if (workAspect.ShowWarning)
-                                {
-                                    <div class="text-danger">Warning: New progress is lower than current progress!</div>
-                                }
+                                <InputNumber @bind-Value="workAspect.NewProgress" class="form-control" min="0" max="100"/>
                             </td>
                         </tr>
                     }
@@ -147,7 +126,6 @@
     public int ContractID { get; set; }
 
     CultureInfo crCulture = new CultureInfo("es-CR"); // Costa Rica culture
-
     private List<Revision> RevisionsList { get; set; } = new();
     private Revision NewRevision { get; set; } = new()
         {
@@ -184,31 +162,25 @@
         if (contract != null)
         {
             contract.UpdateOverallProgress();
+            contract.UpdateDueBalance();
             context.SaveChanges();
         }
     }
 
     private void AddRevision()
     {
+
         using var context = DbFactory.CreateDbContext();
         NewRevision.ContractID = ContractID;
-
-        // Fetch the contract to get the total amount
-        var contract = context.Contracts.Find(ContractID);
-        if (contract != null)
-        {
-            
-        }
-
         context.Revisions.Add(NewRevision);
         context.SaveChanges();
 
         // Update the progress of each work aspect and create WorkAspectChange entries
         foreach (var workAspect in WorkAspects)
         {
-            if (workAspect.Progress > workAspect.NewProgress)
+            if ((workAspect.Progress > workAspect.NewProgress))
             {
-                // If necessary, handle the logic for reducing progress
+                showWarning = true;
             }
             else
             {
@@ -228,6 +200,15 @@
                 }
             }
         }
+        // Fetch the contract to get the total amount
+        var contract = context.Contracts.Find(ContractID);
+        if (contract != null)
+        {
+            NewRevision.Contract = contract;
+        }
+
+        NewRevision.AmountDue = NewRevision.CalculateAmountDue();
+
         context.SaveChanges();
 
         // Reset the NewRevision object for the next addition
@@ -268,36 +249,19 @@
         }
     }
 
-    private Task ValidateProgress(WorkAspectViewModel workAspect)
+    private bool showWarning = false;
+    private void CloseWarning()
     {
-        // Show a warning if the new progress is less than the current progress
-        if (workAspect.NewProgress < workAspect.Progress)
-        {
-            workAspect.ShowWarning = true;
-        }
-        else
-        {
-            workAspect.ShowWarning = false;
-        }
-        StateHasChanged();
-        return Task.CompletedTask;
+        showWarning = false;
+    }
+    private void OpenWarning()
+    {
+        showWarning = true;
     }
 
     private void GoToDetailsPage()
     {
         NavigationManager.NavigateTo($"/contracts/details?contractid={ContractID}");
-    }
-
-    private bool showWarning = false;
-
-    private void ShowWarning()
-    {
-        showWarning = true;
-    }
-
-    private void CloseWarning()
-    {
-        showWarning = false;
     }
 
     private class WorkAspectViewModel

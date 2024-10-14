@@ -22,6 +22,8 @@ namespace BlazorAppAttempt.Models
         public List<WorkAspect> WorkAspects { get; set; } = new();
         public List<Revision> Revisions { get; set; } = new();
 
+        public List<Transaction> Transactions { get; set; } = new();
+
         // Method to calculate and update the overall progress based on work aspects
         public void UpdateOverallProgress()
         {
@@ -35,6 +37,30 @@ namespace BlazorAppAttempt.Models
             }
 
             Progress = totalWeight > 0 ? totalWeightedProgress / totalWeight : 0;
+        }
+
+        public void UpdateDueBalance()
+        {
+            decimal totalAmountDue = 0;
+
+            foreach (var revision in Revisions)
+            {
+                totalAmountDue += revision.CalculateAmountDue();
+            }
+
+            foreach (var transaction in Transactions)
+            {
+                if (transaction.Type == TransactionType.Credit)
+                {
+                    totalAmountDue -= transaction.Amount;
+                }
+                else
+                {
+                    totalAmountDue += transaction.Amount;
+                }
+            }
+
+            DueBalance = totalAmountDue;
         }
     }
 }
