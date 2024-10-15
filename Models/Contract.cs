@@ -9,6 +9,7 @@ namespace BlazorAppAttempt.Models
         public int SubcontractorID { get; set; } // Foreign Key
         public decimal Amount { get; set; }
         public decimal DueBalance { get; set; }
+        public decimal TotalPaid { get; set; }
         public decimal Progress { get; set; } // Progress Percentage
         public DateTime StartDate { get; set; }
         public DateTime? EndDate { get; set; }
@@ -21,7 +22,6 @@ namespace BlazorAppAttempt.Models
         // Initialize lists to prevent null references
         public List<WorkAspect> WorkAspects { get; set; } = new();
         public List<Revision> Revisions { get; set; } = new();
-
         public List<Transaction> Transactions { get; set; } = new();
 
         // Method to calculate and update the overall progress based on work aspects

@@ -1,26 +1,63 @@
 ﻿<!-- WarningModal.razor -->
-<div class="modal fade show d-block" tabindex="-1" role="dialog">
-    <div class="modal-dialog" role="document">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">@Title</h5>
-                <button type="button" class="close" @onclick="OnClose" aria-label="Close">
-                    <span aria-hidden="true">&times;</span>
-                </button>
-            </div>
-            <div class="modal-body">
-                <p>@Message</p>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" @onclick="OnClose">Close</button>
+@if (IsVisible)
+{
+    <div class="modal fade show d-block" tabindex="-1" role="dialog">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content" style="z-index: 1050;">
+                <!-- Ensuring a higher z-index for the modal -->
+                <div class="modal-header">
+                    <h5 class="modal-title">@Title</h5>
+                    <button type="button" class="close" @onclick="OnCloseHandler" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <p>@Message</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" @onclick="OnCloseHandler">Close</button>
+                </div>
             </div>
         </div>
+        <div class="modal-backdrop fade show" style="z-index: 1040;"></div> <!-- Ensuring lower z-index for backdrop -->
     </div>
-    <div class="modal-backdrop fade show"></div>
-</div>
+}
 
 @code {
     [Parameter] public string Title { get; set; }
     [Parameter] public string Message { get; set; }
     [Parameter] public EventCallback OnClose { get; set; }
+
+    public bool IsVisible { get; set; } = true;
+
+    private async Task OnCloseHandler()
+    {
+        IsVisible = false;
+        await OnClose.InvokeAsync();
+    }
 }
+
+<style>
+    .modal {
+        display: block;
+        background: rgba(0, 0, 0, 0.5);
+    }
+
+    .modal-backdrop {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0, 0, 0, 0.5);
+        z-index: 1040; /* Lower z-index than modal */
+    }
+
+    .modal-content {
+        z-index: 1050; /* Higher z-index to ensure it's on top */
+    }
+
+    .modal-header .close {
+        z-index: 1060; /* Ensure close button is clickable */
+    }
+</style>

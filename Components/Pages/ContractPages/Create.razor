@@ -1,4 +1,4 @@
-﻿@page "/contracts/create"
+﻿@page "/create"
 @using Microsoft.EntityFrameworkCore
 @using BlazorAppAttempt.Models
 @using System.Globalization
@@ -13,25 +13,8 @@
 
     @if (showWarning)
     {
-        <div class="modal fade show d-block" tabindex="-1" role="dialog">
-            <div class="modal-dialog" role="document">
-                <div class="modal-content">
-                    <div class="modal-header">
-                        <h5 class="modal-title">Warning</h5>
-                        <button type="button" class="close" @onclick="CloseWarning" aria-label="Close">
-                            <span aria-hidden="true">&times;</span>
-                        </button>
-                    </div>
-                    <div class="modal-body">
-                        <p>There are errors in the form.</p>
-                    </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" @onclick="CloseWarning">Close</button>
-                    </div>
-                </div>
-            </div>
-        </div>
-        <div class="modal-backdrop fade show"></div>
+        <WarningModal Title="Warning" Message="There are errors in the form." OnClose="CloseWarning" />
+
     }
 
     <EditForm method="post" Model="Contract" OnValidSubmit="AddContract" FormName="create" Enhance>
@@ -117,7 +100,7 @@
                     <ValidationMessage For="() => Contract.Amount" class="text-danger" />
                 </div>
                 <div class="form-group">
-                    <label for="contractAmountUSD">Contract Amount ($):</label>
+                    <label for="contractAmountUSD" class="form-label">Contract Amount ($):</label>
                     <input type="number" id="contractAmountUSD" class="form-control" value="@ContractAmountUSDString" step="0.01" readonly required style="background-color: #e9ecef;" />
                 </div>
                 <hr />
@@ -173,14 +156,16 @@
     private bool showNewSubcontractorForm = false;
     private string newSubcontractorName;
     private int newSubcontractorContact; // 8-digit contact number
+    private bool showWarning = false;
 
     private List<Project> Projects { get; set; } = new();
     private List<Subcontractor> Subcontractors { get; set; } = new();
     private List<WorkAspect> workAspects { get; set; } = new();
+    private List<Revision> revisions { get; set; } = new();
+    private List<Transaction> transactions { get; set; } = new();
 
     private decimal ContractAmountUSD => Contract.Amount / 520;
     private string ContractAmountUSDString => ContractAmountUSD.ToString("F2");
-
     private decimal totalWeight => workAspects.Sum(wa => wa.Weight);
 
     protected override async Task OnInitializedAsync()
@@ -190,12 +175,6 @@
         Subcontractors = await context.Subcontractors.ToListAsync();
         Contract.ProjectID = 0;
         Contract.SubcontractorID = 0;
-        // Initialize default dates for the contract
-        if (Contract.StartDate == default)
-        {
-            Contract.StartDate = DateTime.Today; // Set the default start date to today's date
-            Contract.EndDate = DateTime.Today.AddYears(1); // Set the default end date to one year from today
-        }
     }
 
     private async Task AddContract()
@@ -211,9 +190,12 @@
             using var context = DbFactory.CreateDbContext();
             Contract.DueBalance = Contract.Amount;
             Contract.Progress = 0;
+            Contract.TotalPaid = 0;
             Contract.Subcontractor = await context.Subcontractors.FindAsync(Contract.SubcontractorID);
             Contract.Project = await context.Projects.FindAsync(Contract.ProjectID);
             Contract.WorkAspects = workAspects;
+            Contract.Transactions = transactions;
+            Contract.Revisions = revisions;
             context.Contracts.Add(Contract);
             await context.SaveChangesAsync();
             NavigationManager.NavigateTo("/contracts");
@@ -222,11 +204,12 @@
 
     private void AddWorkAspect()
     {
-        Console.WriteLine("AddWorkAspect was called"); // Debugging line
         var newAspect = new WorkAspect
             {
                 Name = "",
+                ContractID = Contract.ContractID,
                 Weight = 0,
+                Progress = 0,
                 Contract = Contract // Set the required property
             };
         workAspects.Add(newAspect);
@@ -267,6 +250,10 @@
             // Reset the form
             CancelNewProject();
         }
+        else
+        {
+            ShowWarning();
+        }
     }
     private async Task<List<Project>> FetchProjectsAsync()
     {
@@ -300,6 +287,10 @@
 
             CancelNewSubcontractor();
         }
+        else
+        {
+            ShowWarning();
+        }
     }
 
     private async Task<List<Subcontractor>> FetchSubcontractorsAsync()
@@ -307,8 +298,6 @@
         using var context = DbFactory.CreateDbContext();
         return await context.Subcontractors.ToListAsync();
     }
-
-    private bool showWarning = false;
 
     private void ShowWarning()
     {
