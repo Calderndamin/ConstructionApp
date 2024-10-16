@@ -5,6 +5,13 @@
 @inject NavigationManager NavigationManager
 @using System.Globalization;
 
+@inject UserManager<ApplicationUser> UserManager
+@inject IHttpContextAccessor HttpContextAccessor
+
+@using System.ComponentModel.DataAnnotations
+@using Microsoft.AspNetCore.Identity
+@using BlazorAppAttempt.Data
+
 <PageTitle>Revisions</PageTitle>
 
 <div class="container mt-4">
@@ -32,6 +39,7 @@
                     <th>Remarks</th>
                     <th>Work Aspects</th>
                     <th>Amount Due</th> <!-- New column for Amount Due -->
+                    <th>Created By</th>
                 </tr>
             </thead>
             <tbody>
@@ -53,6 +61,7 @@
                             </ul>
                         </td>
                         <td>@revision.AmountDue.ToString("C", crCulture)</td> <!-- Display Amount Due -->
+                        <td>@revision.CreatedBy</td>
                     </tr>
                 }
             </tbody>
@@ -130,9 +139,13 @@
     private Revision NewRevision { get; set; } = new Revision();
     private bool showWarning = false;
     private int currentMaxRevisionNumber;
+    private string? username;
 
     protected override async Task OnInitializedAsync()
     {
+        var user = await UserManager.GetUserAsync(HttpContextAccessor.HttpContext.User);
+        username = user?.UserName;
+
         NewRevision.DateCreated = DateTime.Today;
         await LoadRevisionsAsync();
         await LoadWorkAspectsAsync();
@@ -201,6 +214,7 @@
         }
 
         NewRevision.ContractID = ContractID;
+        NewRevision.CreatedBy = username;
         NewRevision.Contract = contract; // Asignar el contrato a la nueva revisión
         NewRevision.Changes = WorkAspectChanges
             .Where(wac => wac.NewProgress != 0)

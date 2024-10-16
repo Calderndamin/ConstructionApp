@@ -18,7 +18,6 @@ namespace BlazorAppAttempt.Data
         public DbSet<WorkAspect> WorkAspects { get; set; }
         public DbSet<Revision> Revisions { get; set; }
         public DbSet<WorkAspectChange> WorkAspectChanges { get; set; }
-
         public DbSet<Transaction> Transactions { get; set; }
 
         // Configure the entity mappings

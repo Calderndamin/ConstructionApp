@@ -7,7 +7,7 @@
         public int ContractID { get; set; } // Foreign Key
         public DateTime DateCreated { get; set; }
         public string? Remarks { get; set; }
-
+        public string CreatedBy { get; set; }
         public decimal AmountDue { get; set; }
 
         // Navigation Properties

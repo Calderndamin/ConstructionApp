@@ -4,9 +4,16 @@
 @inject IDbContextFactory<BlazorAppAttempt.Data.ApplicationDbContext> DbFactory;
 @inject NavigationManager NavigationManager;
 
+@inject UserManager<ApplicationUser> UserManager
+@inject IHttpContextAccessor HttpContextAccessor
+
+@using System.ComponentModel.DataAnnotations
+@using Microsoft.AspNetCore.Identity
+@using BlazorAppAttempt.Data
+
 <div class="transaction-section container">
     <hr />
-    <h4>Transactions</h4>
+    <h4>Debits & Credits</h4>
     <div class="row">
         <div class="col-md-8">
             <table class="table table-striped table-hover">
@@ -16,6 +23,7 @@
                         <th>Amount</th>
                         <th>Description</th>
                         <th>Date Created</th>
+                        <th>Created By</th>
                         <th>Delete</th>
                     </tr>
                 </thead>
@@ -27,6 +35,7 @@
                             <td>@transaction.Amount.ToString("C", crCulture)</td>
                             <td>@transaction.Description</td>
                             <td>@transaction.DateCreated.ToShortDateString()</td>
+                            <td>@transaction.CreatedBy</td>
                             <td>
                                 <button class="btn btn-danger btn-sm" @onclick="() => DeleteTransaction(transaction.TransactionID)">
                                     <i class="fas fa-trash-alt"></i> Delete
@@ -56,7 +65,7 @@
                         </div>
                         <div class="mb-3">
                             <label for="description" class="form-label">Description:</label>
-                            <InputText id="description" @bind-Value="NewTransaction.Description" class="form-control" />
+                            <InputText id="description" @bind-Value="NewTransaction.Description" class="form-control" placeholder="Advanced payment..."/>
                             <ValidationMessage For="() => NewTransaction.Description" class="text-danger" />
                         </div>
                         <div class="mb-3">
@@ -87,10 +96,14 @@
     CultureInfo crCulture = new CultureInfo("es-CR"); // Costa Rica culture
     private bool showNewTransactionForm = false;
 
+    private string? username;
+
     private Contract contract;
 
-    protected override void OnInitialized()
+    protected override async Task OnInitializedAsync()
     {
+        var user = await UserManager.GetUserAsync(HttpContextAccessor.HttpContext.User);
+        username = user?.UserName;
         LoadContract();
         LoadTransactions();
     }
@@ -117,10 +130,15 @@
 
     private void AddTransaction()
     {
+        if (NewTransaction.Description == null)
+        {
+            return;
+        }
         using var context = DbFactory.CreateDbContext();
         NewTransaction.TransactionID = 0;
         NewTransaction.DateCreated = DateTime.Now;
         NewTransaction.ContractID = ContractID;
+        NewTransaction.CreatedBy = username;
 
         if (NewTransaction.Type == TransactionType.Debit)
         {
@@ -131,8 +149,10 @@
         context.Contracts.Update(contract);
         context.SaveChanges();
 
-        OnInitialized();
-        StateHasChanged();
+        transactions.Add(NewTransaction); // Update the local list
+        NewTransaction = new Transaction(); // Reset the form
+        showNewTransactionForm = false; // Hide the form
+        StateHasChanged(); // Trigger UI update
     }
 
     private void DeleteTransaction(int transactionId)
@@ -145,8 +165,13 @@
             context.Transactions.Remove(transaction);
             context.SaveChanges();
 
-            OnInitialized();
-            StateHasChanged();
+            // Update the local list
+            var transactionToRemove = transactions.FirstOrDefault(t => t.TransactionID == transactionId);
+            if (transactionToRemove != null)
+            {
+                transactions.Remove(transactionToRemove);
+            }
+            StateHasChanged(); // Trigger UI update
         }
     }
 
