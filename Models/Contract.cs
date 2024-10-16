@@ -28,39 +28,25 @@ namespace BlazorAppAttempt.Models
         public void UpdateOverallProgress()
         {
             decimal totalWeightedProgress = 0;
-            decimal totalWeight = 0;
 
             foreach (var aspect in WorkAspects)
             {
                 totalWeightedProgress += aspect.Progress * aspect.Weight;
-                totalWeight += aspect.Weight;
             }
-
-            Progress = totalWeight > 0 ? totalWeightedProgress / totalWeight : 0;
+            Progress = totalWeightedProgress / 100;
         }
 
+        // Call this method after adding or deleting revisions
         public void UpdateDueBalance()
         {
-            decimal totalAmountDue = 0;
-
-            foreach (var revision in Revisions)
-            {
-                totalAmountDue += revision.CalculateAmountDue();
-            }
+            TotalPaid = 0;
 
             foreach (var transaction in Transactions)
             {
-                if (transaction.Type == TransactionType.Credit)
-                {
-                    totalAmountDue -= transaction.Amount;
-                }
-                else
-                {
-                    totalAmountDue += transaction.Amount;
-                }
+                TotalPaid += transaction.Amount;
             }
 
-            DueBalance = totalAmountDue;
+            DueBalance = Amount - TotalPaid; // Calculate DueBalance based on the contract amount
         }
     }
 }

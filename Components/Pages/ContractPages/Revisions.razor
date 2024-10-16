@@ -14,11 +14,11 @@
 
     @if (showWarning)
     {
-        <WarningModal Title="Warning" Message="There are errors in the form." OnClose="CloseWarning" />
+        <WarningModal Title="Warning" Message="An error has occurred." OnClose="CloseWarning" />
     }
 
     <!-- List of Revisions -->
-    @if (RevisionsList.Count == 0)
+    @if (revisions.Count == 0)
     {
         <p class="text-center text-muted">No revisions found.</p>
     }
@@ -32,11 +32,10 @@
                     <th>Remarks</th>
                     <th>Work Aspects</th>
                     <th>Amount Due</th> <!-- New column for Amount Due -->
-                    <th>Actions</th>
                 </tr>
             </thead>
             <tbody>
-                @foreach (var revision in RevisionsList)
+                @foreach (var revision in revisions)
                 {
                     <tr>
                         <td>@revision.RevisionNumber</td>
@@ -54,13 +53,15 @@
                             </ul>
                         </td>
                         <td>@revision.AmountDue.ToString("C", crCulture)</td> <!-- Display Amount Due -->
-                        <td>
-                            <button class="btn btn-danger" @onclick="() => DeleteRevision(revision.RevisionID)">Delete</button>
-                        </td>
                     </tr>
                 }
             </tbody>
         </table>
+            <button class="btn btn-danger" @onclick="() => DeleteRevisionAsync()">Delete Last Revision</button>
+            <div class="text-center">
+                <small class="text-muted
+                    ">Note: You can only delete the last revision.</small>
+                </div>
     }
 
     <div class="row">
@@ -68,26 +69,25 @@
         <div class="col-md-6">
             <!-- Add New Revision Form -->
             <h3>Add New Revision</h3>
-            <EditForm Model="NewRevision" OnValidSubmit="AddRevision">
+            <EditForm Model="NewRevision" OnValidSubmit="AddRevisionAsync">
                 <DataAnnotationsValidator />
                 <ValidationSummary class="text-danger" />
 
                 <div class="mb-3">
-                    <label for="revisionNumber" class="form-label">Revision Number: @NewRevision.RevisionNumber</label>  
+                    <label for="revisionNumber" class="form-label">Revision Number: @NewRevision.RevisionNumber</label>
                 </div>
                 <div class="mb-3">
                     <label for="remarks" class="form-label">Remarks:</label>
-                    <InputText id="remarks" @bind-Value="NewRevision.Remarks" placeholder ="some progress made..." class="form-control" />
+                    <InputText id="remarks" @bind-Value="NewRevision.Remarks" placeholder="some progress made..." class="form-control" />
                     <ValidationMessage For="() => NewRevision.Remarks" class="text-danger" />
                 </div>
 
                 <div class="mb-3">
                     <label for="dateCreated" class="form-label">Date Created:</label>
-                    <InputDate id="dateCreated" @bind-Value="NewRevision.DateCreated" class="form-control" required />
+                    <InputDate id="dateCreated" @bind-Value="NewRevision.DateCreated" class="form-control" placeholder="@DateTime.Today.ToString("yyyy-MM-dd")" required />
                     <ValidationMessage For="() => NewRevision.DateCreated" class="text-danger" />
                 </div>
 
-                
             </EditForm>
         </div>
 
@@ -103,160 +103,164 @@
                     </tr>
                 </thead>
                 <tbody>
-                    @foreach (var workAspect in WorkAspects)
+                    @foreach (var workaspectchange in WorkAspectChanges)
                     {
                         <tr>
-                            <td>@workAspect.Name</td>
-                            <td>@((int)workAspect.Progress)%</td>
+                            <td>@workaspectchange.WorkAspect.Name</td>
+                            <td>@((int)workaspectchange.OldProgress)%</td>
                             <td>
-                                <InputNumber @bind-Value="workAspect.NewProgress" class="form-control" min="0" max="100"/>
+                                <InputNumber @bind-Value="workaspectchange.NewProgress" class="form-control" min="0" max="100" />
                             </td>
                         </tr>
                     }
                 </tbody>
             </table>
-            <button type="submit" @onclick="() => AddRevision()" class="btn btn-primary" disabled="@IsSubmitDisabled">Add Revision</button>
+            <button type="submit" @onclick="() => AddRevisionAsync()" class="btn btn-primary">Add Revision</button>
         </div>
-
     </div>
 </div>
 
 @code {
+    CultureInfo crCulture = new CultureInfo("es-CR"); // Costa Rica culture
     [SupplyParameterFromQuery]
     public int ContractID { get; set; }
 
-    CultureInfo crCulture = new CultureInfo("es-CR"); // Costa Rica culture
-    private List<Revision> RevisionsList { get; set; } = new();
-    private Revision NewRevision { get; set; } = new()
-        {
-            DateCreated = DateTime.Now,
-        };
-    private List<WorkAspectViewModel> WorkAspects { get; set; } = new();
-    private bool IsSubmitDisabled { get; set; } = false;
+    private List<Revision> revisions { get; set; } = new List<Revision>();
+    private List<WorkAspectChange> WorkAspectChanges { get; set; } = new List<WorkAspectChange>();
+    private Revision NewRevision { get; set; } = new Revision();
+    private bool showWarning = false;
+    private int currentMaxRevisionNumber;
 
-    protected override void OnInitialized()
+    protected override async Task OnInitializedAsync()
     {
-        using var context = DbFactory.CreateDbContext();
-        RevisionsList = context.Revisions
-            .Include(r => r.Contract)
-            .Include(r => r.Changes)
-            .ThenInclude(c => c.WorkAspect)
-            .Where(r => r.ContractID == ContractID)
-            .ToList();
+        NewRevision.DateCreated = DateTime.Today;
+        await LoadRevisionsAsync();
+        await LoadWorkAspectsAsync();
 
-        WorkAspects = context.WorkAspects
-            .Where(wa => wa.ContractID == ContractID)
-            .Select(wa => new WorkAspectViewModel
+        /// Inicializar el contador con el valor máximo de RevisionNumber
+        await using var db = DbFactory.CreateDbContext();
+        currentMaxRevisionNumber = await db.Revisions
+            .Where(r => r.ContractID == ContractID)
+            .MaxAsync(r => (int?)r.RevisionNumber) ?? 0;
+
+        NewRevision.RevisionNumber = ++currentMaxRevisionNumber;
+    }
+
+    private async Task LoadRevisionsAsync()
+    {
+        await using var db = DbFactory.CreateDbContext();
+        revisions = await db.Revisions
+            .Include(r => r.Changes)
+            .ThenInclude(c => c.WorkAspect) // Ensure WorkAspect is included
+            .Where(r => r.ContractID == ContractID)
+            .ToListAsync();
+    }
+
+    private async Task LoadWorkAspectsAsync()
+    {
+        await using var db = DbFactory.CreateDbContext();
+        WorkAspectChanges = await db.WorkAspects
+            .Select(wa => new WorkAspectChange
                 {
-                    WorkAspectID = wa.WorkAspectID,
-                    Name = wa.Name,
-                    Progress = wa.Progress,
-                    NewProgress = wa.Progress
+                    WorkAspect = wa,
+                    OldProgress = wa.Progress, // Asignar el progreso actual
+                    NewProgress = wa.Progress // Inicializar el nuevo progreso al progreso actual
+                })
+            .ToListAsync();
+    }
+
+    private async Task AddRevisionAsync()
+    {
+        if (NewRevision == null)
+        {
+            OpenWarning();
+            return;
+        }
+
+        // Validar que el nuevo progreso no sea menor que el progreso actual
+        foreach (var change in WorkAspectChanges)
+        {
+            if (change.NewProgress < change.OldProgress)
+            {
+                OpenWarning();
+                return;
+            }
+        }
+
+        await using var db = DbFactory.CreateDbContext();
+        NewRevision.ContractID = ContractID;
+        NewRevision.Changes = WorkAspectChanges
+            .Where(wac => wac.NewProgress != 0)
+            .Select(wac => new WorkAspectChange
+                {
+                    WorkAspectID = wac.WorkAspect.WorkAspectID,
+                    OldProgress = wac.OldProgress,
+                    NewProgress = wac.NewProgress
                 })
             .ToList();
 
-        NewRevision.RevisionNumber = RevisionsList.Count + 1;
+        db.Revisions.Add(NewRevision);
 
-        // Call the UpdateOverallProgress() method of the Contract class
-        var contract = context.Contracts.Find(ContractID);
-        if (contract != null)
+        // Actualizar el progreso de cada WorkAspect en la base de datos
+        foreach (var change in NewRevision.Changes)
         {
-            contract.UpdateOverallProgress();
-            contract.UpdateDueBalance();
-            context.SaveChanges();
-        }
-    }
-
-    private void AddRevision()
-    {
-
-        using var context = DbFactory.CreateDbContext();
-        NewRevision.ContractID = ContractID;
-        context.Revisions.Add(NewRevision);
-        context.SaveChanges();
-
-        // Update the progress of each work aspect and create WorkAspectChange entries
-        foreach (var workAspect in WorkAspects)
-        {
-            if ((workAspect.Progress > workAspect.NewProgress))
+            var workAspect = await db.WorkAspects.FindAsync(change.WorkAspectID);
+            if (workAspect != null)
             {
-                showWarning = true;
-            }
-            else
-            {
-                var change = new WorkAspectChange
-                    {
-                        WorkAspectID = workAspect.WorkAspectID,
-                        OldProgress = workAspect.Progress,
-                        NewProgress = workAspect.NewProgress,
-                        RevisionID = NewRevision.RevisionID
-                    };
-                context.WorkAspectChanges.Add(change);
-
-                var existingWorkAspect = context.WorkAspects.Find(workAspect.WorkAspectID);
-                if (existingWorkAspect != null)
-                {
-                    existingWorkAspect.Progress = workAspect.NewProgress;
-                }
+                workAspect.Progress = change.NewProgress;
             }
         }
-        // Fetch the contract to get the total amount
-        var contract = context.Contracts.Find(ContractID);
-        if (contract != null)
-        {
-            NewRevision.Contract = contract;
-        }
 
-        NewRevision.AmountDue = NewRevision.CalculateAmountDue();
+        await db.SaveChangesAsync();
 
-        context.SaveChanges();
-
-        // Reset the NewRevision object for the next addition
-        NewRevision = new()
-            {
-                DateCreated = DateTime.Now,
-                RevisionNumber = RevisionsList.Count + 1
-            };
-        NavigationManager.NavigateTo($"/revisions?contractID={ContractID}", forceLoad: true);
+        NewRevision = new Revision();
+        await OnInitializedAsync();
     }
 
-    private void DeleteRevision(int revisionID)
+    private async Task DeleteRevisionAsync()
     {
-        using var context = DbFactory.CreateDbContext();
-        var revision = context.Revisions
+        await using var db = DbFactory.CreateDbContext();
+
+        // Obtener la última revisión
+        var latestRevision = await db.Revisions
+            .Where(r => r.ContractID == ContractID)
+            .OrderByDescending(r => r.RevisionNumber)
+            .FirstOrDefaultAsync();
+
+        if (latestRevision == null)
+        {
+            OpenWarning();
+            return;
+        }
+
+        // Incluir los cambios relacionados y los WorkAspects
+        var revision = await db.Revisions
             .Include(r => r.Changes)
-            .FirstOrDefault(r => r.RevisionID == revisionID);
+            .ThenInclude(c => c.WorkAspect)
+            .FirstOrDefaultAsync(r => r.RevisionID == latestRevision.RevisionID);
 
-        if (revision != null && revision.RevisionNumber == RevisionsList.Max(r => r.RevisionNumber))
+        if (revision != null)
         {
-            // Update the progress of each work aspect to its previous value
+            // Revertir el progreso de cada WorkAspect a su OldProgress
             foreach (var change in revision.Changes)
             {
-                var workAspect = context.WorkAspects.Find(change.WorkAspectID);
+                var workAspect = await db.WorkAspects.FindAsync(change.WorkAspectID);
                 if (workAspect != null)
                 {
                     workAspect.Progress = change.OldProgress;
                 }
             }
 
-            // Remove the changes and the revision
-            context.WorkAspectChanges.RemoveRange(revision.Changes);
-            context.Revisions.Remove(revision);
-            context.SaveChanges();
-
-            // Refresh the page
-            NavigationManager.NavigateTo($"/revisions?contractID={ContractID}", forceLoad: true);
+            // Eliminar los cambios relacionados primero
+            db.WorkAspectChanges.RemoveRange(revision.Changes);
+            db.Revisions.Remove(revision);
+            await db.SaveChangesAsync();
+            await OnInitializedAsync();
         }
-    }
-
-    private bool showWarning = false;
-    private void CloseWarning()
-    {
-        showWarning = false;
-    }
-    private void OpenWarning()
-    {
-        showWarning = true;
+        else
+        {
+            OpenWarning();
+        }
     }
 
     private void GoToDetailsPage()
@@ -264,13 +268,13 @@
         NavigationManager.NavigateTo($"/contracts/details?contractid={ContractID}");
     }
 
-    private class WorkAspectViewModel
+    private void OpenWarning()
     {
-        public int WorkAspectID { get; set; }
-        public string Name { get; set; }
-        public decimal Progress { get; set; }
-        public decimal NewProgress { get; set; }
-        public bool ShowWarning { get; set; }
+        showWarning = true;
+    }
+
+    private void CloseWarning()
+    {
+        showWarning = false;
     }
 }
-

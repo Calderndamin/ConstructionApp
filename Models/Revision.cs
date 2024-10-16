@@ -16,18 +16,23 @@
         public List<WorkAspectChange> Changes { get; set; } = new List<WorkAspectChange>();
 
         // New method to calculate the amount due based on progress made in this revision
-        public decimal CalculateAmountDue()
+        public void CalculateAmountDue()
         {
             if (Contract != null && Changes != null)
             {
-                // Calculate the total progress change across all work aspects in this revision
-                decimal totalProgressChange = Changes.Sum(change => (change.NewProgress - change.OldProgress ) * change.WorkAspect.Weight);
+                decimal totalProgressChange = Changes.Sum(change =>
+                    (change.NewProgress - change.OldProgress) * change.WorkAspect.Weight);
 
-                // Calculate the amount due based on the contract's total amount and the total progress change
-                AmountDue = Contract.Amount * (totalProgressChange / 10000);
+                AmountDue = Contract.Amount * (totalProgressChange / 10000); // Adjust denominator if necessary
+
+                Console.WriteLine($"Total Progress Change: {totalProgressChange}, Amount Due: {AmountDue}");
             }
-            return decimal.Round(AmountDue, 2);
+            else
+            {
+                AmountDue = 0; // Ensure it's reset if there are no changes
+            }
         }
+
     }
 
 }
