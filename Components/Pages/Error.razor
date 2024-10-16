@@ -3,15 +3,12 @@
 
 <PageTitle>Under Construction</PageTitle>
 
-<h1 class="text-danger">We're currently under construction</h1>
-<h2 class="text-danger">This module will be available soon...</h2>
+<h1>We're currently under construction</h1>
+<h2>This module will be available soon...</h2>
 
-@if (ShowRequestId)
-{
-    <p>
-        <strong>Request ID:</strong> <code>@RequestId</code>
-    </p>
-}
+
+<img src="/images/construction.png" alt="Welcome Image" class="centered-image" />
+
 
 @code{
     [CascadingParameter]
@@ -23,3 +20,13 @@
     protected override void OnInitialized() =>
         RequestId = Activity.Current?.Id ?? HttpContext?.TraceIdentifier;
 }
+
+<style>
+    .centered-image {
+        display: block;
+        margin-left: auto;
+        margin-right: auto;
+        max-width: 40%;
+        height: auto;
+    }
+</style>
