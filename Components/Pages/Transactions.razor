@@ -1,119 +1,77 @@
 ﻿@using System.Globalization;
-@using Microsoft.EntityFrameworkCore;
-@using BlazorAppAttempt.Models;
-@inject IDbContextFactory<BlazorAppAttempt.Data.ApplicationDbContext> DbFactory;
-@inject NavigationManager NavigationManager;
+@using Microsoft.EntityFrameworkCore
+@using BlazorAppAttempt.Models
+@inject IDbContextFactory<BlazorAppAttempt.Data.ApplicationDbContext> DbFactory
+@inject NavigationManager NavigationManager
 
-<div class="transaction-section container">
+<div class="transaction-section">
     <hr />
     <h4>Transactions</h4>
-    <div class="row">
-        <div class="col-md-8">
-            <table class="table table-striped table-hover">
-                <thead class="table-dark">
+    <div class="col-md-6">
+        <table class="table table-striped table-hover">
+            <thead class="table-dark">
+                <tr>
+                    <th>Type</th>
+                    <th>Amount</th>
+                    <th>Description</th>
+                    <th>Date Created</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var transaction in transactions)
+                {
                     <tr>
-                        <th>Type</th>
-                        <th>Amount</th>
-                        <th>Description</th>
-                        <th>Date Created</th>
-                        <th>Delete</th>
+                        <td>@transaction.Type</td>
+                        <td>@transaction.Amount.ToString("C", crCulture)</td>
+                        <td>@transaction.Description</td>
+                        <td>@transaction.DateCreated.ToShortDateString()</td>
                     </tr>
-                </thead>
-                <tbody>
-                    @foreach (var transaction in transactions)
-                    {
-                        <tr>
-                            <td>@transaction.Type</td>
-                            <td>@transaction.Amount.ToString("C", crCulture)</td>
-                            <td>@transaction.Description</td>
-                            <td>@transaction.DateCreated.ToShortDateString()</td>
-                            <td>
-                                <button class="btn btn-danger btn-sm" @onclick="() => DeleteTransaction(transaction.TransactionID)">
-                                    <i class="fas fa-trash-alt"></i> Delete
-                                </button>
-                            </td>
-                        </tr>
-                    }
-                </tbody>
-            </table>
-        </div>
+                }
+            </tbody>
+        </table>
+        <div class="col-md-6">
+            <h3>Add Transaction</h3>
+            <EditForm Model="NewTransaction" OnValidSubmit="AddTransaction">
+                <DataAnnotationsValidator />
+                <ValidationSummary class="text-danger" />
 
-        <div class="col-md-4">
-            <button type="button" class="btn btn-link" @onclick="ShowNewTransactionForm">Add New Transaction</button>
-
-            @if (showNewTransactionForm)
-            {
-                <div class="card p-3 mt-3">
-                    <h5 class="card-title">Add Transaction</h5>
-                    <EditForm Model="NewTransaction" OnValidSubmit="AddTransaction">
-                        <DataAnnotationsValidator />
-                        <ValidationSummary class="text-danger" />
-
-                        <div class="mb-3">
-                            <label for="amount" class="form-label">Amount:</label>
-                            <InputNumber id="amount" @bind-Value="NewTransaction.Amount" class="form-control" />
-                            <ValidationMessage For="() => NewTransaction.Amount" class="text-danger" />
-                        </div>
-                        <div class="mb-3">
-                            <label for="description" class="form-label">Description:</label>
-                            <InputText id="description" @bind-Value="NewTransaction.Description" class="form-control" />
-                            <ValidationMessage For="() => NewTransaction.Description" class="text-danger" />
-                        </div>
-                        <div class="mb-3">
-                            <label for="type" class="form-label">Type:</label>
-                            <InputSelect id="type" @bind-Value="NewTransaction.Type" class="form-control">
-                                <option value="Credit">Credit</option>
-                                <option value="Debit">Debit</option>
-                            </InputSelect>
-                            <ValidationMessage For="() => NewTransaction.Type" class="text-danger" />
-                        </div>
-                        <div class="d-flex justify-content-between">
-                            <button type="submit" class="btn btn-primary">Add Transaction</button>
-                            <button type="button" class="btn btn-secondary" @onclick="CancelNewTransaction">Cancel</button>
-                        </div>
-                    </EditForm>
+                <div class="mb-3">
+                    <label for="amount" class="form-label">Amount:</label>
+                    <InputNumber id="amount" @bind-Value="NewTransaction.Amount" class="form-control" />
+                    <ValidationMessage For="() => NewTransaction.Amount" class="text-danger" />
                 </div>
-            }
+                <div class="mb-3">
+                    <label for="description" class="form-label">Description:</label>
+                    <InputText id="description" @bind-Value="NewTransaction.Description" class="form-control" />
+                    <ValidationMessage For="() => NewTransaction.Description" class="text-danger" />
+                </div>
+                <div class="mb-3">
+                    <label for="type" class="form-label">Type:</label>
+                    <InputSelect id="type" @bind-Value="NewTransaction.Type" class="form-control">
+                        <option value="Credit">Credit</option>
+                        <option value="Debit">Debit</option>
+                    </InputSelect>
+                    <ValidationMessage For="() => NewTransaction.Type" class="text-danger" />
+                </div>
+                <button type="submit" class="btn btn-primary">Add Transaction</button>
+            </EditForm>
         </div>
+
     </div>
+
+
 </div>
 
 @code {
+
     [Parameter]
     public int ContractID { get; set; }
 
     private List<Transaction> transactions { get; set; } = new();
     private Transaction NewTransaction { get; set; } = new();
     CultureInfo crCulture = new CultureInfo("es-CR"); // Costa Rica culture
-    private bool showNewTransactionForm = false;
 
     private Contract contract;
-
-    protected override void OnInitialized()
-    {
-        LoadContract();
-        LoadTransactions();
-    }
-
-    private void LoadContract()
-    {
-        using var context = DbFactory.CreateDbContext();
-        contract = context.Contracts
-            .Include(c => c.Transactions)
-            .FirstOrDefault(c => c.ContractID == ContractID);
-    }
-
-    private void ShowNewTransactionForm()
-    {
-        showNewTransactionForm = !showNewTransactionForm;
-    }
-
-    private void CancelNewTransaction()
-    {
-        showNewTransactionForm = false;
-        NewTransaction.Description = string.Empty;
-        NewTransaction.Amount = 0;
-    }
 
     private void AddTransaction()
     {
@@ -121,33 +79,10 @@
         NewTransaction.TransactionID = 0;
         NewTransaction.DateCreated = DateTime.Now;
         NewTransaction.ContractID = ContractID;
-
-        if (NewTransaction.Type == TransactionType.Debit)
-        {
-            NewTransaction.Amount = -NewTransaction.Amount;
-        }
-
         contract.Transactions.Add(NewTransaction);
-        context.Contracts.Update(contract);
+        context.Transactions.Add(NewTransaction);
         context.SaveChanges();
-
-        OnInitialized();
-        StateHasChanged();
-    }
-
-    private void DeleteTransaction(int transactionId)
-    {
-        using var context = DbFactory.CreateDbContext();
-        var transaction = context.Transactions.FirstOrDefault(t => t.TransactionID == transactionId);
-        if (transaction != null)
-        {
-            contract.Transactions.Remove(transaction);
-            context.Transactions.Remove(transaction);
-            context.SaveChanges();
-
-            OnInitialized();
-            StateHasChanged();
-        }
+        LoadTransactions();
     }
 
     private void LoadTransactions()
@@ -158,22 +93,3 @@
             .ToList();
     }
 }
-
-<style>
-
-    .transaction-section h4 {
-        margin-bottom: 20px;
-    }
-
-    .transaction-section .btn-danger {
-        display: inline-flex;
-        align-items: center;
-    }
-
-    .transaction-section .card {
-        border-radius: 10px;
-        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-    }
-
-
-</style>

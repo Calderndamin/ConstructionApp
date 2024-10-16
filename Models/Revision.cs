@@ -25,6 +25,7 @@
 
                 AmountDue = Contract.Amount * (totalProgressChange / 10000); // Adjust denominator if necessary
 
+                Console.WriteLine($"Total Progress Change: {totalProgressChange}, Amount Due: {AmountDue}");
             }
             else
             {

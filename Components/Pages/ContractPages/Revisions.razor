@@ -144,7 +144,6 @@
             .MaxAsync(r => (int?)r.RevisionNumber) ?? 0;
 
         NewRevision.RevisionNumber = ++currentMaxRevisionNumber;
-
     }
 
     private async Task LoadRevisionsAsync()
@@ -169,7 +168,7 @@
                 })
             .ToListAsync();
     }
-    
+
     private async Task AddRevisionAsync()
     {
         if (NewRevision == null)
@@ -189,19 +188,7 @@
         }
 
         await using var db = DbFactory.CreateDbContext();
-
-        // Cargar el contrato correspondiente al ContractID
-        var contract = await db.Contracts
-            .Include(c => c.Revisions) // Incluir las revisiones del contrato
-            .FirstOrDefaultAsync(c => c.ContractID == ContractID);
-        if (contract == null)
-        {
-            OpenWarning();
-            return;
-        }
-
         NewRevision.ContractID = ContractID;
-        NewRevision.Contract = contract; // Asignar el contrato a la nueva revisión
         NewRevision.Changes = WorkAspectChanges
             .Where(wac => wac.NewProgress != 0)
             .Select(wac => new WorkAspectChange
@@ -223,22 +210,6 @@
                 workAspect.Progress = change.NewProgress;
             }
         }
-        
-
-        // Agregar la nueva revisión a la lista de revisiones del contrato
-        contract.Revisions.Add(NewRevision);
-
-        // Llamar a los métodos de actualización del contrato
-        contract.UpdateOverallProgress();
-        NewRevision.CalculateAmountDue();
-        contract.UpdateTotalPaid();
-
-        contract.TotalPaid -= NewRevision.AmountDue; // Restar el AmountDue de la nueva revisión
-
-        contract.DueBalance = contract.Amount - contract.TotalPaid;
-
-        // Marcar el contrato como modificado
-        db.Entry(contract).State = EntityState.Modified;
 
         await db.SaveChangesAsync();
 
@@ -283,21 +254,6 @@
             // Eliminar los cambios relacionados primero
             db.WorkAspectChanges.RemoveRange(revision.Changes);
             db.Revisions.Remove(revision);
-
-            // Llamar a los métodos de actualización del contrato
-            var contract = await db.Contracts
-                .Include(c => c.Revisions) // Incluir las revisiones del contrato
-                .FirstOrDefaultAsync(c => c.ContractID == ContractID);
-            if (contract != null)
-            {
-                contract.UpdateOverallProgress();
-                contract.Revisions.Remove(revision);
-                contract.UpdateTotalPaid();
-                contract.DueBalance = contract.Amount - contract.TotalPaid;
-                // Marcar el contrato como modificado
-                db.Entry(contract).State = EntityState.Modified;
-            }
-
             await db.SaveChangesAsync();
             await OnInitializedAsync();
         }
@@ -306,7 +262,6 @@
             OpenWarning();
         }
     }
-
 
     private void GoToDetailsPage()
     {

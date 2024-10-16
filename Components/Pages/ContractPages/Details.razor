@@ -102,17 +102,11 @@
             </div>
         </div>
 
-        <div>
-            <Transactions ContractID="@ContractID" />
-        </div>
-
         <div class="summary-section">
             <hr />
             <h4>Summary</h4>
-            <p><strong>Total Amount:</strong> @contract?.Amount.ToString("C", crCulture)</p>
-            <p><strong>Total from Transactions:</strong> @TransactionTotal.ToString("C", crCulture)</p>
-            <p><strong>Total from Revisions:</strong> @contract?.TotalPaid.ToString("C", crCulture)</p>
-            <p><strong>Amount Due (From Progress):</strong> @contract?.DueBalance.ToString("C", crCulture)</p>
+            <p><strong>Total Paid:</strong> @contract?.TotalPaid.ToString("C", crCulture)</p>
+            <p><strong>Amount Due:</strong> @contract?.DueBalance.ToString("C", crCulture)</p>
         </div>
 
         <div class="text-right mt-2">
@@ -127,8 +121,6 @@
 
     private decimal ContractAmountUSD => contract.Amount / 520;
     private string ContractAmountUSDString => ContractAmountUSD.ToString("C");
-
-    private decimal TransactionTotal => contract.Transactions.Sum(t => t.Amount);
 
     CultureInfo crCulture = new CultureInfo("es-CR"); // Costa Rica culture
 
@@ -145,7 +137,6 @@
             .Include(c => c.Subcontractor)
             .Include(c => c.WorkAspects)
             .Include(c => c.Revisions)
-            .Include(c => c.Transactions)
             .FirstOrDefaultAsync(m => m.ContractID == ContractID);
     }
 

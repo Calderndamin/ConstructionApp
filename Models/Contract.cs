@@ -1,5 +1,4 @@
 ﻿using Microsoft.CodeAnalysis;
-using Microsoft.IdentityModel.Tokens;
 
 namespace BlazorAppAttempt.Models
 {
@@ -37,20 +36,17 @@ namespace BlazorAppAttempt.Models
             Progress = totalWeightedProgress / 100;
         }
 
-        public void UpdateTotalPaid()
+        // Call this method after adding or deleting revisions
+        public void UpdateDueBalance()
         {
-            if (Revisions != null)
+            TotalPaid = 0;
+
+            foreach (var transaction in Transactions)
             {
-                TotalPaid = Revisions.Sum(r => r.AmountDue);
-            }
-            else
-            {
-                TotalPaid = 0;
+                TotalPaid += transaction.Amount;
             }
 
-
-
+            DueBalance = Amount - TotalPaid; // Calculate DueBalance based on the contract amount
         }
-
     }
 }
