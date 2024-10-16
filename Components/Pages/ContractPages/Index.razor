@@ -29,7 +29,7 @@
                                 <p><strong>Amount:</strong> @contract.Amount.ToString("C", crCulture)</p>
                                 <p><strong>Start Date:</strong> @contract.StartDate.ToShortDateString()</p>
                                 <p><strong>Project:</strong> @contract.Project.ProjectName</p>
-                                <h5><strong>Due Balance:</strong> @contract.DueBalance.ToString("C", crCulture)</h5>
+                                <p><strong>Due Balance:</strong> @contract.DueBalance.ToString("C", crCulture)</p>
                                 <div class="progress">
                                     <div class="progress-bar" role="progressbar" style="width:@contract.Progress%" aria-valuenow="@contract.Progress" aria-valuemin="0" aria-valuemax="100">@contract.Progress%</div>
                                 </div>
