@@ -4,72 +4,75 @@
 @inject IDbContextFactory<BlazorAppAttempt.Data.ApplicationDbContext> DbFactory
 @inject NavigationManager NavigationManager
 
-<PageTitle>Edit</PageTitle>
+<PageTitle>Edit Contract</PageTitle>
 
-<h1>Edit</h1>
-
-<h2>Contract</h2>
-<hr />
-@if (Contract is null)
-{
-    <p><em>Loading...</em></p>
-}
-else
-{
-    <div class="row">
-        <div class="col-md-4">
-            <EditForm method="post" Model="Contract" OnValidSubmit="UpdateContract" FormName="edit" Enhance>
-                <DataAnnotationsValidator />
-                <ValidationSummary />
-                <input type="hidden" name="Contract.ContractID" value="@Contract.ContractID" />
-                <div class="mb-3">
-                    <label for="projectid" class="form-label">ProjectID:</label>
-                    <InputNumber id="projectid" @bind-Value="Contract.ProjectID" class="form-control" />
-                    <ValidationMessage For="() => Contract.ProjectID" class="text-danger" />
+<div class="container mt-4">
+    <h1 class="text-center">Edit Contract</h1>
+    <hr />
+    @if (Contract is null)
+    {
+        <p><em>Loading...</em></p>
+    }
+    else
+    {
+        <div class="row justify-content-center">
+            <div class="col-md-8">
+                <div class="card shadow-sm">
+                    <div class="card-body">
+                        <EditForm method="post" Model="Contract" OnValidSubmit="UpdateContract" FormName="edit" Enhance>
+                            <DataAnnotationsValidator />
+                            <ValidationSummary />
+                            <input type="hidden" name="Contract.ContractID" value="@Contract.ContractID" />
+                            <div class="mb-3">
+                                <label for="projectid" class="form-label"><i class="fas fa-project-diagram"></i> Project ID:</label>
+                                <InputNumber id="projectid" @bind-Value="Contract.ProjectID" class="form-control" />
+                                <ValidationMessage For="() => Contract.ProjectID" class="text-danger" />
+                            </div>
+                            <div class="mb-3">
+                                <label for="subcontractorid" class="form-label"><i class="fas fa-user-tie"></i> Subcontractor ID:</label>
+                                <InputNumber id="subcontractorid" @bind-Value="Contract.SubcontractorID" class="form-control" />
+                                <ValidationMessage For="() => Contract.SubcontractorID" class="text-danger" />
+                            </div>
+                            <div class="mb-3">
+                                <label for="contractamount" class="form-label"><i class="fas fa-dollar-sign"></i> Contract Amount:</label>
+                                <InputNumber id="contractamount" @bind-Value="Contract.Amount" class="form-control" />
+                                <ValidationMessage For="() => Contract.Amount" class="text-danger" />
+                            </div>
+                            <div class="mb-3">
+                                <label for="duebalance" class="form-label"><i class="fas fa-balance-scale"></i> Due Balance:</label>
+                                <InputNumber id="duebalance" @bind-Value="Contract.DueBalance" class="form-control" />
+                                <ValidationMessage For="() => Contract.DueBalance" class="text-danger" />
+                            </div>
+                            <div class="mb-3">
+                                <label for="progress" class="form-label"><i class="fas fa-tasks"></i> Progress:</label>
+                                <InputNumber id="progress" @bind-Value="Contract.Progress" class="form-control" />
+                                <ValidationMessage For="() => Contract.Progress" class="text-danger" />
+                            </div>
+                            <div class="mb-3">
+                                <label for="startdate" class="form-label"><i class="fas fa-calendar-alt"></i> Start Date:</label>
+                                <InputDate id="startdate" @bind-Value="Contract.StartDate" class="form-control" />
+                                <ValidationMessage For="() => Contract.StartDate" class="text-danger" />
+                            </div>
+                            <div class="mb-3">
+                                <label for="enddate" class="form-label"><i class="fas fa-calendar-check"></i> End Date:</label>
+                                <InputDate id="enddate" @bind-Value="Contract.EndDate" class="form-control" />
+                                <ValidationMessage For="() => Contract.EndDate" class="text-danger" />
+                            </div>
+                            <div class="mb-3">
+                                <label for="othercontractdetails" class="form-label"><i class="fas fa-info-circle"></i> Other Contract Details:</label>
+                                <InputText id="othercontractdetails" @bind-Value="Contract.OtherContractDetails" class="form-control" />
+                                <ValidationMessage For="() => Contract.OtherContractDetails" class="text-danger" />
+                            </div>
+                            <button type="submit" class="btn btn-primary btn-block"><i class="fas fa-save"></i> Save</button>
+                        </EditForm>
+                    </div>
                 </div>
-                <div class="mb-3">
-                    <label for="subcontractorid" class="form-label">SubcontractorID:</label>
-                    <InputNumber id="subcontractorid" @bind-Value="Contract.SubcontractorID" class="form-control" />
-                    <ValidationMessage For="() => Contract.SubcontractorID" class="text-danger" />
-                </div>
-                <div class="mb-3">
-                    <label for="contractamount" class="form-label">ContractAmount:</label>
-                    <InputNumber id="contractamount" @bind-Value="Contract.Amount" class="form-control" />
-                    <ValidationMessage For="() => Contract.Amount" class="text-danger" />
-                </div>
-                <div class="mb-3">
-                    <label for="duebalance" class="form-label">DueBalance:</label>
-                    <InputNumber id="duebalance" @bind-Value="Contract.DueBalance" class="form-control" />
-                    <ValidationMessage For="() => Contract.DueBalance" class="text-danger" />
-                </div>
-                <div class="mb-3">
-                    <label for="progress" class="form-label">Progress:</label>
-                    <InputNumber id="progress" @bind-Value="Contract.Progress" class="form-control" />
-                    <ValidationMessage For="() => Contract.Progress" class="text-danger" />
-                </div>
-                <div class="mb-3">
-                    <label for="startdate" class="form-label">StartDate:</label>
-                    <InputDate id="startdate" @bind-Value="Contract.StartDate" class="form-control" />
-                    <ValidationMessage For="() => Contract.StartDate" class="text-danger" />
-                </div>
-                <div class="mb-3">
-                    <label for="enddate" class="form-label">EndDate:</label>
-                    <InputDate id="enddate" @bind-Value="Contract.EndDate" class="form-control" />
-                    <ValidationMessage For="() => Contract.EndDate" class="text-danger" />
-                </div>
-                <div class="mb-3">
-                    <label for="othercontractdetails" class="form-label">OtherContractDetails:</label>
-                    <InputText id="othercontractdetails" @bind-Value="Contract.OtherContractDetails" class="form-control" />
-                    <ValidationMessage For="() => Contract.OtherContractDetails" class="text-danger" />
-                </div>
-                <button type="submit" class="btn btn-primary">Save</button>
-            </EditForm>
+            </div>
         </div>
+    }
+    <div class="text-center mt-4">
+        <a href="/contracts" class="btn btn-secondary"><i class="fas fa-arrow-left"></i> Back to List</a>
     </div>
-}
-
-<div>
-    <a href="/contracts">Back to List</a>
 </div>
 
 @code {
@@ -90,8 +93,6 @@ else
         }
     }
 
-    // To protect from overposting attacks, enable the specific properties you want to bind to.
-    // For more information, see https://learn.microsoft.com/aspnet/core/blazor/forms/#mitigate-overposting-attacks.
     private async Task UpdateContract()
     {
         using var context = DbFactory.CreateDbContext();
@@ -122,3 +123,57 @@ else
         return context.Contracts.Any(e => e.ContractID == contractid);
     }
 }
+
+<style>
+    .container {
+        max-width: 800px;
+    }
+
+    .card {
+        border-radius: 10px;
+        background-color: #ffffff;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    }
+
+    .card-body {
+        padding: 2rem;
+    }
+
+    .form-label {
+        font-weight: bold;
+    }
+
+    .btn-block {
+        width: 100%;
+    }
+
+    .btn-primary {
+        background-color: #007bff;
+        color: white;
+    }
+
+        .btn-primary:hover {
+            opacity: 0.8;
+        }
+
+    .btn-secondary {
+        background-color: #6c757d;
+        color: white;
+    }
+
+        .btn-secondary:hover {
+            opacity: 0.8;
+        }
+
+    .text-center {
+        text-align: center;
+    }
+
+    .mt-4 {
+        margin-top: 1.5rem;
+    }
+
+    .mb-3 {
+        margin-bottom: 1rem;
+    }
+</style>

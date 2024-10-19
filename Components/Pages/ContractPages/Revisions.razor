@@ -1,9 +1,10 @@
 ﻿@page "/revisions"
 @using BlazorAppAttempt.Models
 @using Microsoft.EntityFrameworkCore
-@inject IDbContextFactory<BlazorAppAttempt.Data.ApplicationDbContext> DbFactory
+@using BlazorAppAttempt.Components.Interfaces
+@inject IRevisionService RevisionService
 @inject NavigationManager NavigationManager
-@using System.Globalization;
+@using System.Globalization
 
 @inject UserManager<ApplicationUser> UserManager
 @inject IHttpContextAccessor HttpContextAccessor
@@ -41,7 +42,7 @@
                     <th>Date Created</th>
                     <th>Remarks</th>
                     <th>Work Aspects</th>
-                    <th>Amount Due</th> <!-- New column for Amount Due -->
+                    <th>Amount Due</th>
                     <th>Created By</th>
                 </tr>
             </thead>
@@ -63,23 +64,21 @@
                                 }
                             </ul>
                         </td>
-                        <td>@revision.AmountDue.ToString("C", crCulture)</td> <!-- Display Amount Due -->
+                        <td>@revision.AmountDue.ToString("C", crCulture)</td>
                         <td>@revision.CreatedBy</td>
                     </tr>
                 }
             </tbody>
         </table>
-            <button class="btn btn-danger" @onclick="() => DeleteRevisionAsync()">Delete Last Revision</button>
-            <div class="text-center">
-                <small class="text-muted
-                    ">Note: You can only delete the last revision.</small>
-                </div>
+        <button class="btn btn-danger" @onclick="DeleteRevisionAsync">Delete Last Revision</button>
+        <div class="text-center">
+            <small class="text-muted">Note: You can only delete the last revision.</small>
+        </div>
     }
 
     <div class="row">
         <hr />
         <div class="col-md-6">
-            <!-- Add New Revision Form -->
             <h3>Add New Revision</h3>
             <EditForm Model="NewRevision" OnValidSubmit="AddRevisionAsync">
                 <DataAnnotationsValidator />
@@ -99,12 +98,10 @@
                     <InputDate id="dateCreated" @bind-Value="NewRevision.DateCreated" class="form-control" placeholder="@DateTime.Today.ToString("yyyy-MM-dd")" required />
                     <ValidationMessage For="() => NewRevision.DateCreated" class="text-danger" />
                 </div>
-
             </EditForm>
         </div>
 
         <div class="col-md-6">
-            <!-- Table for Work Aspects -->
             <h5>Work Aspects</h5>
             <table class="table table-striped table-hover">
                 <thead class="table-dark">
@@ -127,203 +124,79 @@
                     }
                 </tbody>
             </table>
-            <button type="submit" @onclick="() => AddRevisionAsync()" class="btn btn-primary">Add Revision</button>
+            <button type="submit" @onclick="AddRevisionAsync" class="btn btn-primary">Add Revision</button>
         </div>
     </div>
 </div>
 
 @code {
-    CultureInfo crCulture = new CultureInfo("es-CR"); // Costa Rica culture
+    CultureInfo crCulture = new CultureInfo("es-CR");
+   
     [SupplyParameterFromQuery]
     public int ContractID { get; set; }
 
     private List<Revision> revisions { get; set; } = new List<Revision>();
     private List<WorkAspectChange> WorkAspectChanges { get; set; } = new List<WorkAspectChange>();
     private Revision NewRevision { get; set; } = new Revision();
+
     private bool showWarning = false;
     private int currentMaxRevisionNumber;
     private string? username;
 
+    [Inject]
+    private AuthenticationStateProvider AuthenticationStateProvider { get; set; }
+
     protected override async Task OnInitializedAsync()
     {
-        var user = await UserManager.GetUserAsync(HttpContextAccessor.HttpContext.User);
-        username = user?.UserName;
-
+        username = await GetUsernameAsync();
         NewRevision.DateCreated = DateTime.Today;
-        await LoadRevisionsAsync();
-        await LoadWorkAspectsAsync();
 
-        /// Inicializar el contador con el valor máximo de RevisionNumber
-        await using var db = DbFactory.CreateDbContext();
-        currentMaxRevisionNumber = await db.Revisions
-            .Where(r => r.ContractID == ContractID)
-            .MaxAsync(r => (int?)r.RevisionNumber) ?? 0;
+        var loadRevisionsTask = RevisionService.GetRevisionsAsync(ContractID);
+        var loadWorkAspectsTask = RevisionService.GetWorkAspectChangesAsync(ContractID);
+        await Task.WhenAll(loadRevisionsTask, loadWorkAspectsTask);
 
+        revisions = await loadRevisionsTask;
+        WorkAspectChanges = await loadWorkAspectsTask;
+
+        currentMaxRevisionNumber = await RevisionService.GetCurrentMaxRevisionNumberAsync(ContractID);
         NewRevision.RevisionNumber = ++currentMaxRevisionNumber;
-
     }
 
-    private async Task LoadRevisionsAsync()
+    private async Task<string?> GetUsernameAsync()
     {
-        await using var db = DbFactory.CreateDbContext();
-        revisions = await db.Revisions
-            .Include(r => r.Changes)
-            .ThenInclude(c => c.WorkAspect) // Ensure WorkAspect is included
-            .Where(r => r.ContractID == ContractID)
-            .ToListAsync();
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+
+        if (user.Identity.IsAuthenticated)
+        {
+            username = user.Identity.Name;
+        }
+        else
+        {
+            username = "Not Found"; // Or handle the unauthenticated state
+        }
+
+        return username;
     }
 
-    private async Task LoadWorkAspectsAsync()
-    {
-        await using var db = DbFactory.CreateDbContext();
-        WorkAspectChanges = await db.WorkAspects
-            .Select(wa => new WorkAspectChange
-                {
-                    WorkAspect = wa,
-                    OldProgress = wa.Progress, // Asignar el progreso actual
-                    NewProgress = wa.Progress // Inicializar el nuevo progreso al progreso actual
-                })
-            .ToListAsync();
-    }
-    
     private async Task AddRevisionAsync()
     {
-        if (NewRevision == null)
+        if (NewRevision == null || WorkAspectChanges.Any(change => change.NewProgress < change.OldProgress))
         {
             OpenWarning();
             return;
         }
 
-        // Validar que el nuevo progreso no sea menor que el progreso actual
-        foreach (var change in WorkAspectChanges)
-        {
-            if (change.NewProgress < change.OldProgress)
-            {
-                OpenWarning();
-                return;
-            }
-        }
-
-        await using var db = DbFactory.CreateDbContext();
-
-        // Cargar el contrato correspondiente al ContractID
-        var contract = await db.Contracts
-            .Include(c => c.Revisions) // Incluir las revisiones del contrato
-            .FirstOrDefaultAsync(c => c.ContractID == ContractID);
-        if (contract == null)
-        {
-            OpenWarning();
-            return;
-        }
-
-        NewRevision.ContractID = ContractID;
-        NewRevision.CreatedBy = username;
-        NewRevision.Contract = contract; // Asignar el contrato a la nueva revisión
-        NewRevision.Changes = WorkAspectChanges
-            .Where(wac => wac.NewProgress != 0)
-            .Select(wac => new WorkAspectChange
-                {
-                    WorkAspectID = wac.WorkAspect.WorkAspectID,
-                    OldProgress = wac.OldProgress,
-                    NewProgress = wac.NewProgress
-                })
-            .ToList();
-
-        db.Revisions.Add(NewRevision);
-
-        // Actualizar el progreso de cada WorkAspect en la base de datos
-        foreach (var change in NewRevision.Changes)
-        {
-            var workAspect = await db.WorkAspects.FindAsync(change.WorkAspectID);
-            if (workAspect != null)
-            {
-                workAspect.Progress = change.NewProgress;
-            }
-        }
-        
-
-        // Agregar la nueva revisión a la lista de revisiones del contrato
-        contract.Revisions.Add(NewRevision);
-
-        // Llamar a los métodos de actualización del contrato
-        contract.UpdateOverallProgress();
-        NewRevision.CalculateAmountDue();
-        contract.UpdateTotalPaid();
-
-        contract.TotalPaid -= NewRevision.AmountDue; // Restar el AmountDue de la nueva revisión
-
-        contract.DueBalance = contract.Amount - contract.TotalPaid;
-
-        // Marcar el contrato como modificado
-        db.Entry(contract).State = EntityState.Modified;
-
-        await db.SaveChangesAsync();
-
+        await RevisionService.AddRevisionAsync(NewRevision, WorkAspectChanges, username, ContractID);
         NewRevision = new Revision();
         await OnInitializedAsync();
     }
 
     private async Task DeleteRevisionAsync()
     {
-        await using var db = DbFactory.CreateDbContext();
-
-        // Obtener la última revisión
-        var latestRevision = await db.Revisions
-            .Where(r => r.ContractID == ContractID)
-            .OrderByDescending(r => r.RevisionNumber)
-            .FirstOrDefaultAsync();
-
-        if (latestRevision == null)
-        {
-            OpenWarning();
-            return;
-        }
-
-        // Incluir los cambios relacionados y los WorkAspects
-        var revision = await db.Revisions
-            .Include(r => r.Changes)
-            .ThenInclude(c => c.WorkAspect)
-            .FirstOrDefaultAsync(r => r.RevisionID == latestRevision.RevisionID);
-
-        if (revision != null)
-        {
-            // Revertir el progreso de cada WorkAspect a su OldProgress
-            foreach (var change in revision.Changes)
-            {
-                var workAspect = await db.WorkAspects.FindAsync(change.WorkAspectID);
-                if (workAspect != null)
-                {
-                    workAspect.Progress = change.OldProgress;
-                }
-            }
-
-            // Eliminar los cambios relacionados primero
-            db.WorkAspectChanges.RemoveRange(revision.Changes);
-            db.Revisions.Remove(revision);
-
-            // Llamar a los métodos de actualización del contrato
-            var contract = await db.Contracts
-                .Include(c => c.Revisions) // Incluir las revisiones del contrato
-                .FirstOrDefaultAsync(c => c.ContractID == ContractID);
-            if (contract != null)
-            {
-                contract.UpdateOverallProgress();
-                contract.Revisions.Remove(revision);
-                contract.UpdateTotalPaid();
-                contract.DueBalance = contract.Amount - contract.TotalPaid;
-                // Marcar el contrato como modificado
-                db.Entry(contract).State = EntityState.Modified;
-            }
-
-            await db.SaveChangesAsync();
-            await OnInitializedAsync();
-        }
-        else
-        {
-            OpenWarning();
-        }
+        await RevisionService.DeleteRevisionAsync(ContractID);
+        await OnInitializedAsync();
     }
-
 
     private void GoToDetailsPage()
     {

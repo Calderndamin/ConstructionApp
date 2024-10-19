@@ -209,6 +209,7 @@
         } 
     }
 
+
     private void AddWorkAspect()
     {
         var newAspect = new WorkAspect
@@ -229,10 +230,12 @@
         StateHasChanged();
     }
 
+
     private void ShowNewProjectForm()
     {
         showNewProjectForm = true;
     }
+
     private void CancelNewProject()
     {
         showNewProjectForm = false;
@@ -262,11 +265,13 @@
             ShowWarning();
         }
     }
+
     private async Task<List<Project>> FetchProjectsAsync()
     {
         using var context = DbFactory.CreateDbContext();
         return await context.Projects.ToListAsync();
     }
+
 
     private void ShowNewSubcontractorForm()
     {
@@ -305,6 +310,7 @@
         using var context = DbFactory.CreateDbContext();
         return await context.Subcontractors.ToListAsync();
     }
+
 
     private void ShowWarning()
     {

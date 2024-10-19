@@ -1,19 +1,13 @@
-﻿@using System.Globalization;
-@using Microsoft.EntityFrameworkCore;
+﻿@page "/transactions"
+@using System.Globalization;
 @using BlazorAppAttempt.Models;
-@inject IDbContextFactory<BlazorAppAttempt.Data.ApplicationDbContext> DbFactory;
+@using BlazorAppAttempt.Components.Interfaces;
+@inject ITransactionService TransactionService;
 @inject NavigationManager NavigationManager;
-
-@inject UserManager<ApplicationUser> UserManager
-@inject IHttpContextAccessor HttpContextAccessor
-
-@using System.ComponentModel.DataAnnotations
-@using Microsoft.AspNetCore.Identity
-@using BlazorAppAttempt.Data
+@inject IHttpContextAccessor HttpContextAccessor;
+@inject ITransactionService TransactionService;
 
 <div class="transaction-section container">
-    <hr />
-    <h4>Debits & Credits</h4>
     <div class="row">
         <div class="col-md-8">
             <table class="table table-striped table-hover">
@@ -46,44 +40,43 @@
                 </tbody>
             </table>
         </div>
+    </div>
+    <div class="row">
+        <button type="button" class="btn btn-link" @onclick="ShowNewTransactionForm">Add New Transaction</button>
 
-        <div class="col-md-4">
-            <button type="button" class="btn btn-link" @onclick="ShowNewTransactionForm">Add New Transaction</button>
+        @if (showNewTransactionForm)
+        {
+            <div class="card p-3 mt-3">
+                <h5 class="card-title">Add Transaction</h5>
+                <EditForm Model="NewTransaction" OnValidSubmit="AddTransaction">
+                    <DataAnnotationsValidator />
+                    <ValidationSummary class="text-danger" />
 
-            @if (showNewTransactionForm)
-            {
-                <div class="card p-3 mt-3">
-                    <h5 class="card-title">Add Transaction</h5>
-                    <EditForm Model="NewTransaction" OnValidSubmit="AddTransaction">
-                        <DataAnnotationsValidator />
-                        <ValidationSummary class="text-danger" />
-
-                        <div class="mb-3">
-                            <label for="amount" class="form-label">Amount:</label>
-                            <InputNumber id="amount" @bind-Value="NewTransaction.Amount" class="form-control" />
-                            <ValidationMessage For="() => NewTransaction.Amount" class="text-danger" />
-                        </div>
-                        <div class="mb-3">
-                            <label for="description" class="form-label">Description:</label>
-                            <InputText id="description" @bind-Value="NewTransaction.Description" class="form-control" placeholder="Advanced payment..."/>
-                            <ValidationMessage For="() => NewTransaction.Description" class="text-danger" />
-                        </div>
-                        <div class="mb-3">
-                            <label for="type" class="form-label">Type:</label>
-                            <InputSelect id="type" @bind-Value="NewTransaction.Type" class="form-control">
-                                <option value="Credit">Credit</option>
-                                <option value="Debit">Debit</option>
-                            </InputSelect>
-                            <ValidationMessage For="() => NewTransaction.Type" class="text-danger" />
-                        </div>
-                        <div class="d-flex justify-content-between">
-                            <button type="submit" class="btn btn-primary">Add Transaction</button>
-                            <button type="button" class="btn btn-secondary" @onclick="CancelNewTransaction">Cancel</button>
-                        </div>
-                    </EditForm>
-                </div>
-            }
-        </div>
+                    <div class="mb-3">
+                        <label for="amount" class="form-label">Amount:</label>
+                        <InputNumber id="amount" @bind-Value="NewTransaction.Amount" class="form-control" />
+                        <ValidationMessage For="() => NewTransaction.Amount" class="text-danger" />
+                    </div>
+                    <div class="mb-3">
+                        <label for="description" class="form-label">Description:</label>
+                        <InputText id="description" @bind-Value="NewTransaction.Description" class="form-control" placeholder="Advanced payment..." />
+                        <ValidationMessage For="() => NewTransaction.Description" class="text-danger" />
+                    </div>
+                    <div class="mb-3">
+                        <label for="type" class="form-label">Type:</label>
+                        <InputSelect id="type" @bind-Value="NewTransaction.Type" class="form-control">
+                            <option value="Credit">Credit</option>
+                            <option value="Debit">Debit</option>
+                        </InputSelect>
+                        <ValidationMessage For="() => NewTransaction.Type" class="text-danger" />
+                    </div>
+                    <div class="d-flex justify-content-between">
+                        <button type="submit" class="btn btn-primary">Add Transaction</button>
+                        <button type="button" class="btn btn-secondary" @onclick="CancelNewTransaction">Cancel</button>
+                    </div>
+                </EditForm>
+            </div>
+        }
     </div>
 </div>
 
@@ -93,27 +86,17 @@
 
     private List<Transaction> transactions { get; set; } = new();
     private Transaction NewTransaction { get; set; } = new();
-    CultureInfo crCulture = new CultureInfo("es-CR"); // Costa Rica culture
     private bool showNewTransactionForm = false;
-
     private string? username;
-
     private Contract contract;
+
+    CultureInfo crCulture = new CultureInfo("es-CR");
 
     protected override async Task OnInitializedAsync()
     {
-        var user = await UserManager.GetUserAsync(HttpContextAccessor.HttpContext.User);
-        username = user?.UserName;
-        LoadContract();
-        LoadTransactions();
-    }
-
-    private void LoadContract()
-    {
-        using var context = DbFactory.CreateDbContext();
-        contract = context.Contracts
-            .Include(c => c.Transactions)
-            .FirstOrDefault(c => c.ContractID == ContractID);
+        username = await TransactionService.GetUsernameAsync();
+        contract = TransactionService.LoadContract(ContractID);
+        transactions = TransactionService.LoadTransactions(ContractID);
     }
 
     private void ShowNewTransactionForm()
@@ -130,25 +113,12 @@
 
     private void AddTransaction()
     {
-        if (NewTransaction.Description == null)
+        if (NewTransaction.Description == null || NewTransaction.Amount == 0)
         {
             return;
         }
-        using var context = DbFactory.CreateDbContext();
-        NewTransaction.TransactionID = 0;
-        NewTransaction.DateCreated = DateTime.Now;
-        NewTransaction.ContractID = ContractID;
-        NewTransaction.CreatedBy = username;
 
-        if (NewTransaction.Type == TransactionType.Debit)
-        {
-            NewTransaction.Amount = -NewTransaction.Amount;
-        }
-
-        contract.Transactions.Add(NewTransaction);
-        context.Contracts.Update(contract);
-        context.SaveChanges();
-
+        TransactionService.AddTransaction(NewTransaction, username, ContractID);
         transactions.Add(NewTransaction); // Update the local list
         NewTransaction = new Transaction(); // Reset the form
         showNewTransactionForm = false; // Hide the form
@@ -157,48 +127,65 @@
 
     private void DeleteTransaction(int transactionId)
     {
-        using var context = DbFactory.CreateDbContext();
-        var transaction = context.Transactions.FirstOrDefault(t => t.TransactionID == transactionId);
-        if (transaction != null)
+        TransactionService.DeleteTransaction(transactionId, ContractID);
+
+        // Update the local list
+        var transactionToRemove = transactions.FirstOrDefault(t => t.TransactionID == transactionId);
+        if (transactionToRemove != null)
         {
-            contract.Transactions.Remove(transaction);
-            context.Transactions.Remove(transaction);
-            context.SaveChanges();
-
-            // Update the local list
-            var transactionToRemove = transactions.FirstOrDefault(t => t.TransactionID == transactionId);
-            if (transactionToRemove != null)
-            {
-                transactions.Remove(transactionToRemove);
-            }
-            StateHasChanged(); // Trigger UI update
+            transactions.Remove(transactionToRemove);
         }
-    }
-
-    private void LoadTransactions()
-    {
-        using var context = DbFactory.CreateDbContext();
-        transactions = context.Transactions
-            .Where(t => t.ContractID == ContractID)
-            .ToList();
+        StateHasChanged(); // Trigger UI update
     }
 }
 
 <style>
-
-    .transaction-section h4 {
-        margin-bottom: 20px;
+    .transaction-section {
+        margin-top: 20px;
     }
 
-    .transaction-section .btn-danger {
-        display: inline-flex;
-        align-items: center;
-    }
+        .transaction-section h4 {
+            margin-bottom: 20px;
+        }
 
-    .transaction-section .card {
-        border-radius: 10px;
-        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-    }
+        .transaction-section .btn-link {
+            color: #007bff;
+            text-decoration: none;
+        }
 
+            .transaction-section .btn-link:hover {
+                text-decoration: underline;
+            }
 
+        .transaction-section .btn-danger {
+            display: inline-flex;
+            align-items: center;
+        }
+
+        .transaction-section .card {
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .transaction-section .card-title {
+            font-weight: bold;
+        }
+
+        .transaction-section .form-label {
+            font-weight: bold;
+        }
+
+        .transaction-section .btn-primary {
+            background-color: #007bff;
+            border-color: #007bff;
+        }
+
+        .transaction-section .btn-secondary {
+            background-color: #6c757d;
+            border-color: #6c757d;
+        }
+
+            .transaction-section .btn-primary:hover, .transaction-section .btn-secondary:hover {
+                opacity: 0.8;
+            }
 </style>

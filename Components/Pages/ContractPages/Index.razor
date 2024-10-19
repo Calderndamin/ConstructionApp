@@ -10,16 +10,53 @@
 
 <PageTitle>Active Contracts</PageTitle>
 
+<head>
+    <!-- Add this in your HTML head section -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
+</head>
+
 <div class="container mt-4">
     <h1 class="text-center">Overview of Contracts</h1>
     <hr />
 
     <div class="row">
-        @if (Contracts != null)
+        <div class="col-md-4 mb-3">
+            <div class="input-group">
+                <div class="input-group-prepend">
+                    <span class="input-group-text"><i class="bi bi-funnel"></i></span>
+                </div>
+                <select class="form-control" @bind="SelectedFilter" @bind:event="onchange">
+                    <option value="">Filter by...</option>
+                    <optgroup label="Subcontractors">
+                        @foreach (var name in SubcontractorNames)
+                        {
+                            <option value="@name">@name</option>
+                        }
+                    </optgroup>
+                    <optgroup label="Projects">
+                        @foreach (var name in ProjectNames)
+                        {
+                            <option value="@name">@name</option>
+                        }
+                    </optgroup>
+                </select>
+            </div>
+
+        </div>
+        <div class="col-md-8 mb-3">
+            <div class="input-group">
+                <div class="input-group-prepend">
+                    <span class="input-group-text"><i class="bi bi-search"></i></span>
+                </div>
+                <input type="text" class="form-control" @bind="searchTerm" placeholder="Search Contracts..." @oninput="OnSearchTermChanged">
+            </div>
+        </div>
+
+        @if (FilteredContracts != null)
         {
-            @if (Contracts.Any())
+            @if (FilteredContracts.Any())
             {
-                @foreach (var contract in Contracts)
+                @foreach (var contract in FilteredContracts)
                 {
                     if (contract?.Subcontractor != null && contract?.Project != null)
                     {
@@ -34,8 +71,15 @@
                                     <div class="progress-bar" role="progressbar" style="width:@contract.Progress%" aria-valuenow="@contract.Progress" aria-valuemin="0" aria-valuemax="100">@contract.Progress%</div>
                                 </div>
                                 <div class="text-right mt-2">
-                                    <button class="btn btn-primary" @onclick="() => OnDetailsClick(contract.ContractID)">View Details</button>
+                                    <button class="btn btn-primary btn-icon" @onclick="() => OnDetailsClick(contract.ContractID)">
+                                        <i class="fas fa-info-circle"></i> View Details
+                                    </button>
+                                    <button class="btn btn-warning btn-icon ml-2" @onclick="() => OnChangeOrderClick(contract.ContractID)">
+                                        <i class="fas fa-edit"></i> Change Order
+                                    </button>
                                 </div>
+
+
                             </div>
                         </div>
                     }
@@ -52,7 +96,26 @@
 @code {
     private ApplicationDbContext context = default!;
     private List<Contract>? Contracts;
+    private List<Contract>? FilteredContracts;
+    private List<string> SubcontractorNames = new List<string>();
+    private List<string> ProjectNames = new List<string>();
     CultureInfo crCulture = new CultureInfo("es-CR"); // Costa Rica culture
+
+    private string searchTerm = "";
+    private string selectedFilter = "";
+
+    private string SelectedFilter
+    {
+        get => selectedFilter;
+        set
+        {
+            if (selectedFilter != value)
+            {
+                selectedFilter = value;
+                OnFilterChanged();
+            }
+        }
+    }
 
     protected override async Task OnInitializedAsync()
     {
@@ -61,6 +124,50 @@
             .Include(c => c.Project)
             .Include(c => c.Subcontractor)
             .ToListAsync();
+        FilteredContracts = Contracts;
+
+        // Populate subcontractor and project names separately
+        SubcontractorNames = Contracts
+            .Select(c => c.Subcontractor?.Name ?? string.Empty)
+            .Where(name => !string.IsNullOrEmpty(name))
+            .Distinct()
+            .ToList();
+
+        ProjectNames = Contracts
+            .Select(c => c.Project?.ProjectName ?? string.Empty)
+            .Where(name => !string.IsNullOrEmpty(name))
+            .Distinct()
+            .ToList();
+    }
+
+    private void OnFilterChanged()
+    {
+        FilteredContracts = GetFilteredContracts();
+    }
+
+    private void OnSearchTermChanged(ChangeEventArgs e)
+    {
+        searchTerm = e.Value?.ToString() ?? "";
+        FilteredContracts = GetFilteredContracts();
+    }
+
+    private List<Contract> GetFilteredContracts()
+    {
+        if (Contracts == null)
+        {
+            return new List<Contract>();
+        }
+
+        return Contracts.Where(c =>
+            (string.IsNullOrEmpty(selectedFilter) ||
+             c.Subcontractor?.Name == selectedFilter ||
+             c.Project?.ProjectName == selectedFilter) &&
+            (string.IsNullOrEmpty(searchTerm) ||
+             (!string.IsNullOrEmpty(c.Subcontractor?.Name) && c.Subcontractor.Name.ToLower().Contains(searchTerm.ToLower())) ||
+             (!string.IsNullOrEmpty(c.Project?.ProjectName) && c.Project.ProjectName.ToLower().Contains(searchTerm.ToLower())) ||
+             c.Amount.ToString().Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ||
+             c.DueBalance.ToString().Contains(searchTerm, StringComparison.OrdinalIgnoreCase))
+        ).ToList();
     }
 
     public async ValueTask DisposeAsync() => await context.DisposeAsync();
@@ -69,9 +176,36 @@
     {
         NavigationManager.NavigateTo($"/contracts/details?contractid={contractID}");
     }
+
+    private void OnChangeOrderClick(int contractID)
+    {
+        NavigationManager.NavigateTo($"/contracts/edit?contractid={contractID}");
+    }
 }
 
 <style>
+    .btn-icon {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+        .btn-icon i {
+            margin-right: 5px;
+        }
+
+    .btn-warning {
+        background-color: #ffc107;
+        color: white;
+    }
+
+        .btn-warning:hover {
+            opacity: 0.8;
+        }
+
+    .ml-2 {
+        margin-left: 0.5rem;
+    }
     .container {
         max-width: 1200px;
     }

@@ -48,8 +48,6 @@ namespace BlazorAppAttempt.Models
                 TotalPaid = 0;
             }
 
-
-
         }
 
     }
