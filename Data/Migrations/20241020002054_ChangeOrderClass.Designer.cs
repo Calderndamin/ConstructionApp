@@ -4,6 +4,7 @@ using BlazorAppAttempt.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace BlazorAppAttempt.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20241020002054_ChangeOrderClass")]
+    partial class ChangeOrderClass
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -104,11 +107,15 @@ namespace BlazorAppAttempt.Migrations
                     b.Property<decimal>("DueBalance")
                         .HasColumnType("decimal(18,2)");
 
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
                     b.HasKey("ChangeOrderID");
 
                     b.HasIndex("ContractID");
 
-                    b.ToTable("ChangeOrders");
+                    b.ToTable("ChangeOrder");
                 });
 
             modelBuilder.Entity("BlazorAppAttempt.Models.Contract", b =>
@@ -274,9 +281,6 @@ namespace BlazorAppAttempt.Migrations
 
                     b.Property<int>("ContractID")
                         .HasColumnType("int");
-
-                    b.Property<bool>("IsExtra")
-                        .HasColumnType("bit");
 
                     b.Property<string>("Name")
                         .IsRequired()

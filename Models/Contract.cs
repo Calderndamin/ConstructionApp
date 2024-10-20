@@ -24,9 +24,11 @@ namespace BlazorAppAttempt.Models
         public List<WorkAspect> WorkAspects { get; set; } = new();
         public List<Revision> Revisions { get; set; } = new();
         public List<Transaction> Transactions { get; set; } = new();
-
-        // Method to calculate and update the overall progress based on work aspects
-        public void UpdateOverallProgress()
+        // Navigation property for ChangeOrders
+        public List<ChangeOrder>? ChangeOrders { get; set; } = new();
+    
+    // Method to calculate and update the overall progress based on work aspects
+    public void UpdateOverallProgress()
         {
             decimal totalWeightedProgress = 0;
 

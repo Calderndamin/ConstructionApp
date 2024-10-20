@@ -7,6 +7,10 @@
 
 <PageTitle>New Contract</PageTitle>
 
+<head>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" /
+</head>
+
 <div class="container mt-4">
     <h1 class="text-center">Add a Contract</h1>
     <hr />
@@ -24,7 +28,9 @@
         <div class="row">
             <div class="col-md-6">
                 <div class="mb-3 project-selection">
-                    <label for="projectDropdown" class="form-label">Select Project:</label>
+                    <label for="projectDropdown" class="form-label">
+                        <i class="fas fa-project-diagram"></i> Select Project:
+                    </label>
                     <InputSelect id="projectDropdown" @bind-Value="Contract.ProjectID" class="form-control" required>
                         <option value=0>-- Select a Project --</option>
                         @foreach (var project in Projects)
@@ -34,7 +40,10 @@
                     </InputSelect>
                     <ValidationMessage For="() => Contract.ProjectID" class="text-danger" />
 
-                    <button type="button" class="btn btn-link" @onclick="ShowNewProjectForm">Create New Project</button>
+                    <button type="button" class="btn btn-link" @onclick="ShowNewProjectForm">
+                        <i class="fas fa-plus"></i> Create New Project
+                    </button>
+
                 </div>
 
                 <!-- New Project Form -->
@@ -46,8 +55,13 @@
                         <ValidationMessage For="() => newProjectName" class="text-danger" />
 
                         <div class="button-group mt-2">
-                            <button type="button" class="btn btn-primary" @onclick="CreateProject">Add Project</button>
-                            <button type="button" class="btn btn-secondary" @onclick="CancelNewProject">Cancel</button>
+                            <button type="button" class="btn btn-primary" @onclick="CreateProject">
+                                <i class="fas fa-plus-circle"></i> Add Project
+                            </button>
+                            <button type="button" class="btn btn-secondary" @onclick="CancelNewProject">
+                                <i class="fas fa-times"></i> Cancel
+                            </button>
+
                         </div>
                     </div>
 
@@ -55,7 +69,9 @@
 
                 <!-- Dropdown for Subcontractor selection -->
                 <div class="mb-3">
-                    <label for="subcontractorDropdown" class="form-label">Select Subcontractor:</label>
+                    <label for="subcontractorDropdown" class="form-label">
+                        <i class="fas fa-user-tie"></i> Select Subcontractor:
+                    </label>
                     <InputSelect id="subcontractorDropdown" @bind-Value="Contract.SubcontractorID" class="form-control" required>
                         <option value=0>-- Select a Subcontractor --</option>
                         @foreach (var subcontractor in Subcontractors)
@@ -64,7 +80,10 @@
                         }
                     </InputSelect>
                     <ValidationMessage For="() => Contract.SubcontractorID" class="text-danger" />
-                    <button type="button" class="btn btn-link" @onclick="ShowNewSubcontractorForm">Create New Subcontractor</button>
+                    <button type="button" class="btn btn-link" @onclick="ShowNewSubcontractorForm">
+                        <i class="fas fa-plus"></i> Create New Subcontractor
+                    </button>
+
                 </div>
 
                 <!-- New Subcontractor Form -->
@@ -80,21 +99,29 @@
                         <ValidationMessage For="() => newSubcontractorContact" class="text-danger" />
 
                         <div class="button-group mt-3">
-                            <button type="button" class="btn btn-primary" @onclick="CreateSubcontractor">Add Subcontractor</button>
-                            <button type="button" class="btn btn-secondary" @onclick="CancelNewSubcontractor">Cancel</button>
+                            <button type="button" class="btn btn-primary" @onclick="CreateSubcontractor">
+                                <i class="fas fa-plus-circle"></i> Add Subcontractor
+                            </button>
+                            <button type="button" class="btn btn-secondary" @onclick="CancelNewSubcontractor">
+                                <i class="fas fa-times"></i> Cancel
+                            </button>
                         </div>
                     </div>
 
                 }
 
                 <div class="mb-3">
-                    <label for="startdate" class="form-label">Start Date:</label>
+                    <label for="startdate" class="form-label">
+                        <i class="fas fa-calendar-alt"></i> Start Date:
+                    </label>
                     <InputDate id="startdate" @bind-Value="Contract.StartDate" class="form-control" required />
                     <ValidationMessage For="() => Contract.StartDate" class="text-danger" />
                 </div>
 
                 <div class="mb-3">
-                    <label for="othercontractdetails" class="form-label">Other Contract Details:</label>
+                    <label for="othercontractdetails" class="form-label">
+                        <i class="fas fa-info-circle"></i> Other Contract Details:
+                    </label>
                     <InputText id="othercontractdetails" placeholder="Installation of..." @bind-Value="Contract.OtherContractDetails" class="form-control" />
                     <ValidationMessage For="() => Contract.OtherContractDetails" class="text-danger" />
                 </div>
@@ -102,17 +129,24 @@
 
             <div class="col-md-6">
                 <div class="mb-3">
-                    <label for="contractamount" class="form-label">Contract Amount (₡):</label>
+                    <label for="contractamount" class="form-label">
+                        <i class="fas fa-money-bill-wave"></i> Contract Amount (₡):
+                    </label>
                     <InputNumber id="contractamount" @bind-Value="Contract.Amount" class="form-control" required />
                     <ValidationMessage For="() => Contract.Amount" class="text-danger" />
                 </div>
                 <div class="form-group">
-                    <label for="contractAmountUSD" class="form-label">Contract Amount ($):</label>
+                    <label for="contractAmountUSD" class="form-label">
+                        <i class="fas fa-dollar-sign"></i> Contract Amount ($):
+                    </label>
+
                     <input type="number" id="contractAmountUSD" class="form-control" value="@ContractAmountUSDString" step="0.01" readonly required style="background-color: #e9ecef;" />
                 </div>
                 <hr />
                 <div class="progress-section">
-                    <h4>Work Aspects</h4>
+                    <h4>
+                        <i class="fas fa-tasks"></i> Work Aspects
+                    </h4>
                     <table class="table table-striped table-hover">
                         <thead class="table-dark">
                             <tr>
@@ -132,7 +166,9 @@
                                         <input type="number" class="form-control" @bind="aspect.Weight" step="0.1" min="0" max="100" required />
                                     </td>
                                     <td>
-                                        <button type="button" class="btn btn-danger" @onclick="() => RemoveWorkAspect(aspect)">Remove</button>
+                                        <button type="button" class="btn btn-danger" @onclick="() => RemoveWorkAspect(aspect)">
+                                            <i class="fas fa-trash"></i> Remove
+                                        </button>
                                     </td>
                                 </tr>
                             }
@@ -141,11 +177,17 @@
                     <div class="text-danger" style="display: @(totalWeight != 100 ? "block" : "none")">
                         The total weight of all work aspects must equal 100.
                     </div>
-                    <button type="button" class="btn btn-secondary" @onclick="AddWorkAspect">Add Work Aspect</button>
+                    <button type="button" class="btn btn-secondary" @onclick="AddWorkAspect">
+                        <i class="fas fa-plus"></i> Add Work Aspect
+                    </button>
+
                 </div>
             </div>
         </div>
-        <button type="submit" class="btn btn-primary mt-3">Create</button>
+        <button type="submit" class="btn btn-primary mt-3">
+            <i class="fas fa-check"></i> Create
+        </button>
+
     </EditForm>
 </div>
 
@@ -218,6 +260,7 @@
                 ContractID = Contract.ContractID,
                 Weight = 0,
                 Progress = 0,
+                IsExtra = false,
                 Contract = Contract // Set the required property
             };
         workAspects.Add(newAspect);

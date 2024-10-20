@@ -6,6 +6,10 @@
 
 <PageTitle>Edit Contract</PageTitle>
 
+<head>
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" /
+</head>
+
 <div class="container mt-4">
     <h1 class="text-center">Edit Contract</h1>
     <hr />
@@ -15,55 +19,118 @@
     }
     else
     {
+        @if (isUpdateSuccessful)
+        {
+            <div class="alert alert-success" role="alert">
+                Contract updated successfully!
+            </div>
+        }
         <div class="row justify-content-center">
-            <div class="col-md-8">
+            <div class="col-md-5">
                 <div class="card shadow-sm">
                     <div class="card-body">
-                        <EditForm method="post" Model="Contract" OnValidSubmit="UpdateContract" FormName="edit" Enhance>
+                        <h2 class="text-center">General Details</h2>
+                        <EditForm Model="Contract" OnValidSubmit="UpdateContract">
                             <DataAnnotationsValidator />
                             <ValidationSummary />
                             <input type="hidden" name="Contract.ContractID" value="@Contract.ContractID" />
-                            <div class="mb-3">
-                                <label for="projectid" class="form-label"><i class="fas fa-project-diagram"></i> Project ID:</label>
-                                <InputNumber id="projectid" @bind-Value="Contract.ProjectID" class="form-control" />
-                                <ValidationMessage For="() => Contract.ProjectID" class="text-danger" />
-                            </div>
-                            <div class="mb-3">
-                                <label for="subcontractorid" class="form-label"><i class="fas fa-user-tie"></i> Subcontractor ID:</label>
-                                <InputNumber id="subcontractorid" @bind-Value="Contract.SubcontractorID" class="form-control" />
-                                <ValidationMessage For="() => Contract.SubcontractorID" class="text-danger" />
-                            </div>
-                            <div class="mb-3">
-                                <label for="contractamount" class="form-label"><i class="fas fa-dollar-sign"></i> Contract Amount:</label>
-                                <InputNumber id="contractamount" @bind-Value="Contract.Amount" class="form-control" />
-                                <ValidationMessage For="() => Contract.Amount" class="text-danger" />
-                            </div>
-                            <div class="mb-3">
-                                <label for="duebalance" class="form-label"><i class="fas fa-balance-scale"></i> Due Balance:</label>
-                                <InputNumber id="duebalance" @bind-Value="Contract.DueBalance" class="form-control" />
-                                <ValidationMessage For="() => Contract.DueBalance" class="text-danger" />
-                            </div>
-                            <div class="mb-3">
-                                <label for="progress" class="form-label"><i class="fas fa-tasks"></i> Progress:</label>
-                                <InputNumber id="progress" @bind-Value="Contract.Progress" class="form-control" />
-                                <ValidationMessage For="() => Contract.Progress" class="text-danger" />
-                            </div>
-                            <div class="mb-3">
-                                <label for="startdate" class="form-label"><i class="fas fa-calendar-alt"></i> Start Date:</label>
-                                <InputDate id="startdate" @bind-Value="Contract.StartDate" class="form-control" />
-                                <ValidationMessage For="() => Contract.StartDate" class="text-danger" />
-                            </div>
-                            <div class="mb-3">
-                                <label for="enddate" class="form-label"><i class="fas fa-calendar-check"></i> End Date:</label>
-                                <InputDate id="enddate" @bind-Value="Contract.EndDate" class="form-control" />
-                                <ValidationMessage For="() => Contract.EndDate" class="text-danger" />
-                            </div>
-                            <div class="mb-3">
-                                <label for="othercontractdetails" class="form-label"><i class="fas fa-info-circle"></i> Other Contract Details:</label>
-                                <InputText id="othercontractdetails" @bind-Value="Contract.OtherContractDetails" class="form-control" />
-                                <ValidationMessage For="() => Contract.OtherContractDetails" class="text-danger" />
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="projectid" class="form-label"><i class="fas fa-project-diagram"></i> Project:</label>
+                                    <InputSelect id="projectid" @bind-Value="Contract.ProjectID" class="form-control">
+                                        <option value="">Select a project</option>
+                                        @foreach (var project in Projects)
+                                        {
+                                            <option value="@project.ProjectID">@project.ProjectName</option>
+                                        }
+                                    </InputSelect>
+                                    <ValidationMessage For="() => Contract.ProjectID" class="text-danger" />
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="subcontractorid" class="form-label"><i class="fas fa-user-tie"></i> Subcontractor:</label>
+                                    <InputSelect id="subcontractorid" @bind-Value="Contract.SubcontractorID" class="form-control">
+                                        <option value="">Select a subcontractor</option>
+                                        @foreach (var subcontractor in Subcontractors)
+                                        {
+                                            <option value="@subcontractor.SubcontractorID">@subcontractor.Name</option>
+                                        }
+                                    </InputSelect>
+                                    <ValidationMessage For="() => Contract.SubcontractorID" class="text-danger" />
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="startdate" class="form-label"><i class="fas fa-calendar-alt"></i> Start Date:</label>
+                                    <InputDate id="startdate" @bind-Value="Contract.StartDate" class="form-control" />
+                                    <ValidationMessage For="() => Contract.StartDate" class="text-danger" />
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="enddate" class="form-label"><i class="fas fa-calendar-check"></i> End Date:</label>
+                                    <InputDate id="enddate" @bind-Value="Contract.EndDate" class="form-control" />
+                                    <ValidationMessage For="() => Contract.EndDate" class="text-danger" />
+                                </div>
+                                <div class="col-md-12 mb-3">
+                                    <label for="othercontractdetails" class="form-label"><i class="fas fa-info-circle"></i> Other Contract Details:</label>
+                                    <InputText id="othercontractdetails" @bind-Value="Contract.OtherContractDetails" class="form-control" />
+                                    <ValidationMessage For="() => Contract.OtherContractDetails" class="text-danger" />
+                                </div>
+
                             </div>
                             <button type="submit" class="btn btn-primary btn-block"><i class="fas fa-save"></i> Save</button>
+                        </EditForm>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-7">
+                <div class="card shadow-sm">
+                    <div class="card-body">
+                        <h2 class="text-center">Extend Scope</h2>
+                        <EditForm Model="Contract" OnValidSubmit="ExtendScope">
+                            <DataAnnotationsValidator />
+                            <ValidationSummary />
+                        <div class="col-md-6 mb-2">
+                                <label for="contractamount" class="form-label"><i class="fas fa-money-bill-wave"></i> Extra Amount (₡):</label>
+                            <InputNumber id="contractamount" @bind-Value="changeorder.Amount" class="form-control" />
+                        </div>
+                        <div class="col-md-12 mb-2">
+                                <h5>
+                                    <i class="fas fa-tasks"></i> Additional Work Aspects
+                                </h5>
+                                <table class="table table-striped table-hover">
+                                    <thead class="table-dark">
+                                        <tr>
+                                            <th style="width: 200px;">Name</th>
+                                            <th>Weight</th>
+                                            <th>Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @foreach (var aspect in workAspects)
+                                        {
+                                            <tr>
+                                                <td>
+                                                    <input type="text" class="form-control" placeholder="Floors, Windows..." @bind="aspect.Name" required />
+                                                </td>
+                                                <td>
+                                                    <input type="number" class="form-control" @bind="aspect.Weight" step="0.1" min="0" max="100" required />
+                                                </td>
+                                                <td>
+                                                    <button type="button" class="btn btn-danger" @onclick="() => RemoveWorkAspect(aspect)">
+                                                        <i class="fas fa-trash"></i> Remove
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                        }
+                                    </tbody>
+                                </table>
+                                <div class="text-danger" style="display: @(totalWeight != 100 ? "block" : "none")">
+                                    The total weight of all work aspects must equal 100.
+                                </div>
+                                <button type="button" class="btn btn-secondary" @onclick="AddWorkAspect">
+                                    <i class="fas fa-plus"></i> Add Work Aspect
+                                </button>
+                        </div>
+                            <button type="submit" class="btn btn-primary btn-block">
+                                <i class="fas fa-file-alt"></i> Generate Change Order
+                            </button>
                         </EditForm>
                     </div>
                 </div>
@@ -79,24 +146,96 @@
     [SupplyParameterFromQuery]
     private int ContractID { get; set; }
 
-    [SupplyParameterFromForm]
     private Contract? Contract { get; set; }
+    private ChangeOrder? changeorder { get; set; } = new ChangeOrder();
+
+    private List<Project> Projects { get; set; } = new();
+    private List<Subcontractor> Subcontractors { get; set; } = new();
+    private List<WorkAspect> workAspects { get; set; } = new();
+    private decimal totalWeight => workAspects.Sum(wa => wa.Weight);
+
+    private bool isUpdateSuccessful = false;    
 
     protected override async Task OnInitializedAsync()
     {
         using var context = DbFactory.CreateDbContext();
-        Contract ??= await context.Contracts.FirstOrDefaultAsync(m => m.ContractID == ContractID);
+        Contract = await context.Contracts
+                                .Include(c => c.WorkAspects) // Include WorkAspects
+                                .FirstOrDefaultAsync(m => m.ContractID == ContractID);
 
         if (Contract is null)
         {
             NavigationManager.NavigateTo("notfound");
+            return;
+        }
+
+        Projects = await context.Projects.ToListAsync();
+        Subcontractors = await context.Subcontractors.ToListAsync();
+
+        // Initialize workAspects even if Contract.WorkAspects is null
+        //workAspects = Contract.WorkAspects ?? new List<WorkAspect>();
+
+        // Ensure the same for Contract's WorkAspects property
+        if (Contract.WorkAspects == null)
+        {
+            Contract.WorkAspects = new List<WorkAspect>();
         }
     }
 
     private async Task UpdateContract()
     {
         using var context = DbFactory.CreateDbContext();
-        context.Attach(Contract!).State = EntityState.Modified;
+
+        // Fetch the selected Project and Subcontractor objects
+        var selectedProject = await context.Projects.FindAsync(Contract!.ProjectID);
+        var selectedSubcontractor = await context.Subcontractors.FindAsync(Contract.SubcontractorID);
+
+        // Assign the selected objects to the Contract
+        Contract.Project = selectedProject;
+        Contract.Subcontractor = selectedSubcontractor;
+
+        context.Attach(Contract).State = EntityState.Modified;
+
+        try
+        {
+            await context.SaveChangesAsync();
+            isUpdateSuccessful = true;
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            if (!ContractExists(Contract.ContractID))
+            {
+                NavigationManager.NavigateTo("notfound");
+            }
+            else
+            {
+                throw;
+            }
+        }
+        
+    }
+
+    private bool ContractExists(int contractid)
+    {
+        using var context = DbFactory.CreateDbContext();
+        return context.Contracts.Any(e => e.ContractID == contractid);
+    }
+
+    private async Task ExtendScope()
+    {
+        using var context = DbFactory.CreateDbContext();
+        context.Attach(Contract).State = EntityState.Modified;
+
+        // Create a new ChangeOrder instance with only the new work aspects
+        var changeOrder = new ChangeOrder
+            {
+                ContractID = Contract.ContractID,
+                Amount = (changeorder.Amount),
+                DueBalance = changeorder.Amount,
+                WorkAspects = workAspects
+            };
+
+        context.ChangeOrders.Add(changeOrder);
 
         try
         {
@@ -104,7 +243,7 @@
         }
         catch (DbUpdateConcurrencyException)
         {
-            if (!ContractExists(Contract!.ContractID))
+            if (!ContractExists(Contract.ContractID))
             {
                 NavigationManager.NavigateTo("notfound");
             }
@@ -114,19 +253,37 @@
             }
         }
 
-        NavigationManager.NavigateTo("/contracts");
+        // Optionally, navigate to the details page of the new change order
+        NavigationManager.NavigateTo($"/contracts/details?contractid={ContractID}");
+
     }
 
-    private bool ContractExists(int contractid)
+
+    private void AddWorkAspect()
     {
-        using var context = DbFactory.CreateDbContext();
-        return context.Contracts.Any(e => e.ContractID == contractid);
+        var newAspect = new WorkAspect
+            {
+                Name = "",
+                ContractID = Contract.ContractID,
+                Weight = 100,
+                Progress = 0,
+                IsExtra = true,
+                Contract = Contract // Set the required property
+            };
+        workAspects.Add(newAspect);
+        StateHasChanged();
+    }
+
+    private void RemoveWorkAspect(WorkAspect aspect)
+    {
+        workAspects.Remove(aspect);
+        StateHasChanged();
     }
 }
 
 <style>
     .container {
-        max-width: 800px;
+        max-width: 1200px;
     }
 
     .card {

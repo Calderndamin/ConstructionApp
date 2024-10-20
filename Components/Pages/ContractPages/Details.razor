@@ -36,6 +36,11 @@
                     <div class="card-body">
                         <h4 class="card-title">@contract.Subcontractor?.Name</h4>
                         <p class="card-text"><strong>Contract Amount:</strong> @contract.Amount.ToString("C", crCulture) (@ContractAmountUSDString)</p>
+
+                        @if (contract.ChangeOrders != null && contract.ChangeOrders.Any())
+                        {
+                            <p class="card-text"><strong>Extra Amount:</strong> @ChangeOrdersTotal.ToString("C", crCulture)</p>
+                        }
                         <p class="card-text"><strong>Contract Details:</strong> @contract.OtherContractDetails</p>
                         <p class="card-text"><strong>Project:</strong> @contract.Project?.ProjectName</p>
                         <div class="progress mb-3">
@@ -56,7 +61,7 @@
                             <tbody>
                                 @if (contract.WorkAspects != null && contract.WorkAspects.Any())
                                 {
-                                    @foreach (var tracking in contract.WorkAspects)
+                                    @foreach (var tracking in contract.WorkAspects.Where(wa => !wa.IsExtra))
                                     {
                                         <tr>
                                             <td>@tracking.Name</td>
@@ -77,7 +82,29 @@
                                 }
                             </tbody>
                         </table>
+
+                        @if (contract.WorkAspects != null && contract.WorkAspects.Any(wa => wa.IsExtra))
+                        {
+                            <h5 class="mt-4">Additional Aspects</h5>
+                            <table class="table table-striped table-hover">
+                                <tbody>
+                                    @foreach (var tracking in contract.WorkAspects.Where(wa => wa.IsExtra))
+                                    {
+                                        <tr class="table-warning">
+                                            <td>@tracking.Name</td>
+                                            <td>@tracking.Weight.ToString("F0")%</td>
+                                            <td>
+                                                <div class="progress">
+                                                    <div class="progress-bar" role="progressbar" style="width:@tracking.Progress%" aria-valuenow="@tracking.Progress" aria-valuemin="0" aria-valuemax="100">@tracking.Progress%</div>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        }
                     </div>
+
                 </div>
             </div>
 
@@ -173,8 +200,10 @@
         </div>
 
         <div class="text-right mt-2">
+            <button class="btn btn-primary" @onclick="() => OnEditClick(ContractID)">Edit Contract</button>
             <button class="btn btn-danger" @onclick="() => OnDeleteClick(ContractID)">Delete Contract</button>
         </div>
+
     }
 </div>
 
@@ -183,6 +212,7 @@
     private decimal ContractAmountUSD;
     private string ContractAmountUSDString;
     private decimal TransactionTotal;
+    private decimal ChangeOrdersTotal;
 
     CultureInfo crCulture = new CultureInfo("es-CR"); // Costa Rica culture
 
@@ -206,6 +236,7 @@
                 .Include(c => c.WorkAspects)
                 .Include(c => c.Revisions)
                 .Include(c => c.Transactions)
+                .Include(c => c.ChangeOrders) // Assuming ChangeOrders is a navigation property
                 .FirstOrDefaultAsync(m => m.ContractID == ContractID);
         }
         catch (Exception ex)
@@ -228,6 +259,7 @@
             ContractAmountUSDString = ContractAmountUSD.ToString("C", new CultureInfo("en-US"));
 
             TransactionTotal = contract.Transactions.Sum(t => t.Amount);
+            ChangeOrdersTotal = contract.ChangeOrders.Sum(co => co.Amount); // Calculate the sum of change orders
         }
     }
 
@@ -240,9 +272,19 @@
     {
         NavigationManager.NavigateTo($"/contracts/delete?contractid={contractID}");
     }
+
+    private void OnEditClick(int contractID)
+    {
+        NavigationManager.NavigateTo($"/contracts/edit?contractid={contractID}");
+    }
 }
 
+
 <style>
+    .table-warning {
+        background-color: #ede505;
+    }
+
     .container {
         max-width: 1500px;
     }
