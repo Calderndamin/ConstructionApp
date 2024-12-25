@@ -226,15 +226,30 @@
         using var context = DbFactory.CreateDbContext();
         context.Attach(Contract).State = EntityState.Modified;
 
+        
+
         // Create a new ChangeOrder instance with only the new work aspects
         var changeOrder = new ChangeOrder
             {
                 ContractID = Contract.ContractID,
                 Amount = (changeorder.Amount),
                 DueBalance = changeorder.Amount,
-                WorkAspects = workAspects
+                Contract = Contract,
+            
             };
 
+        foreach (var aspect in workAspects)
+        {
+            aspect.ChangeOrder = changeOrder;
+
+        };
+
+        Contract.Amount += changeOrder.Amount;
+
+        changeOrder.WorkAspects = workAspects;
+
+        Contract.ChangeOrders.Add(changeOrder);
+        
         context.ChangeOrders.Add(changeOrder);
 
         try
@@ -268,7 +283,8 @@
                 Weight = 100,
                 Progress = 0,
                 IsExtra = true,
-                Contract = Contract // Set the required property
+                Contract = Contract,// Set the required property
+                ChangeOrder = changeorder
             };
         workAspects.Add(newAspect);
         StateHasChanged();

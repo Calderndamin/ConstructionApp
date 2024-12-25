@@ -12,7 +12,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace BlazorAppAttempt.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20241008174035_InitialCreate")]
+    [Migration("20241023165932_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
@@ -20,7 +20,7 @@ namespace BlazorAppAttempt.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "8.0.8")
+                .HasAnnotation("ProductVersion", "8.0.10")
                 .HasAnnotation("Relational:MaxIdentifierLength", 128);
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
@@ -90,6 +90,30 @@ namespace BlazorAppAttempt.Migrations
                     b.ToTable("AspNetUsers", (string)null);
                 });
 
+            modelBuilder.Entity("BlazorAppAttempt.Models.ChangeOrder", b =>
+                {
+                    b.Property<int>("ChangeOrderID")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("ChangeOrderID"));
+
+                    b.Property<decimal>("Amount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<int>("ContractID")
+                        .HasColumnType("int");
+
+                    b.Property<decimal>("DueBalance")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.HasKey("ChangeOrderID");
+
+                    b.HasIndex("ContractID");
+
+                    b.ToTable("ChangeOrders");
+                });
+
             modelBuilder.Entity("BlazorAppAttempt.Models.Contract", b =>
                 {
                     b.Property<int>("ContractID")
@@ -121,6 +145,9 @@ namespace BlazorAppAttempt.Migrations
 
                     b.Property<int>("SubcontractorID")
                         .HasColumnType("int");
+
+                    b.Property<decimal>("TotalPaid")
+                        .HasColumnType("decimal(18,2)");
 
                     b.HasKey("ContractID");
 
@@ -156,8 +183,15 @@ namespace BlazorAppAttempt.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("RevisionID"));
 
+                    b.Property<decimal>("AmountDue")
+                        .HasColumnType("decimal(18,2)");
+
                     b.Property<int>("ContractID")
                         .HasColumnType("int");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<DateTime>("DateCreated")
                         .HasColumnType("datetime2");
@@ -183,8 +217,8 @@ namespace BlazorAppAttempt.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("SubcontractorID"));
 
-                    b.Property<string>("ContactInfo")
-                        .HasColumnType("nvarchar(max)");
+                    b.Property<int>("ContactInfo")
+                        .HasColumnType("int");
 
                     b.Property<string>("Name")
                         .IsRequired()
@@ -195,6 +229,41 @@ namespace BlazorAppAttempt.Migrations
                     b.ToTable("Subcontractor", (string)null);
                 });
 
+            modelBuilder.Entity("BlazorAppAttempt.Models.Transaction", b =>
+                {
+                    b.Property<int>("TransactionID")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("TransactionID"));
+
+                    b.Property<decimal>("Amount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<int>("ContractID")
+                        .HasColumnType("int");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("DateCreated")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("Type")
+                        .HasColumnType("int");
+
+                    b.HasKey("TransactionID");
+
+                    b.HasIndex("ContractID");
+
+                    b.ToTable("Transactions");
+                });
+
             modelBuilder.Entity("BlazorAppAttempt.Models.WorkAspect", b =>
                 {
                     b.Property<int>("WorkAspectID")
@@ -203,8 +272,14 @@ namespace BlazorAppAttempt.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("WorkAspectID"));
 
+                    b.Property<int?>("ChangeOrderID")
+                        .HasColumnType("int");
+
                     b.Property<int>("ContractID")
                         .HasColumnType("int");
+
+                    b.Property<bool>("IsExtra")
+                        .HasColumnType("bit");
 
                     b.Property<string>("Name")
                         .IsRequired()
@@ -217,6 +292,8 @@ namespace BlazorAppAttempt.Migrations
                         .HasColumnType("decimal(18,2)");
 
                     b.HasKey("WorkAspectID");
+
+                    b.HasIndex("ChangeOrderID");
 
                     b.HasIndex("ContractID");
 
@@ -385,6 +462,17 @@ namespace BlazorAppAttempt.Migrations
                     b.ToTable("AspNetUserTokens", (string)null);
                 });
 
+            modelBuilder.Entity("BlazorAppAttempt.Models.ChangeOrder", b =>
+                {
+                    b.HasOne("BlazorAppAttempt.Models.Contract", "Contract")
+                        .WithMany("ChangeOrders")
+                        .HasForeignKey("ContractID")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Contract");
+                });
+
             modelBuilder.Entity("BlazorAppAttempt.Models.Contract", b =>
                 {
                     b.HasOne("BlazorAppAttempt.Models.Project", "Project")
@@ -415,13 +503,28 @@ namespace BlazorAppAttempt.Migrations
                     b.Navigation("Contract");
                 });
 
+            modelBuilder.Entity("BlazorAppAttempt.Models.Transaction", b =>
+                {
+                    b.HasOne("BlazorAppAttempt.Models.Contract", null)
+                        .WithMany("Transactions")
+                        .HasForeignKey("ContractID")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("BlazorAppAttempt.Models.WorkAspect", b =>
                 {
+                    b.HasOne("BlazorAppAttempt.Models.ChangeOrder", "ChangeOrder")
+                        .WithMany("WorkAspects")
+                        .HasForeignKey("ChangeOrderID");
+
                     b.HasOne("BlazorAppAttempt.Models.Contract", "Contract")
                         .WithMany("WorkAspects")
                         .HasForeignKey("ContractID")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+
+                    b.Navigation("ChangeOrder");
 
                     b.Navigation("Contract");
                 });
@@ -496,9 +599,18 @@ namespace BlazorAppAttempt.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("BlazorAppAttempt.Models.ChangeOrder", b =>
+                {
+                    b.Navigation("WorkAspects");
+                });
+
             modelBuilder.Entity("BlazorAppAttempt.Models.Contract", b =>
                 {
+                    b.Navigation("ChangeOrders");
+
                     b.Navigation("Revisions");
+
+                    b.Navigation("Transactions");
 
                     b.Navigation("WorkAspects");
                 });

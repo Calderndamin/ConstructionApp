@@ -18,12 +18,14 @@
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
     <PackageReference Include="Microsoft.VisualStudio.Web.CodeGeneration.Design" Version="8.0.6" />
-    <PackageReference Include="MudBlazor" Version="7.12.1" />
+    <PackageReference Include="MudBlazor" Version="7.14.0" />
     <PackageReference Include="System.Globalization" Version="4.3.0" />
   </ItemGroup>
 
   <ItemGroup>
     <Folder Include="Components\Services\" />
+    <Folder Include="Data\Migrations\" />
+    <Folder Include="Migrations\" />
   </ItemGroup>
 
 </Project>

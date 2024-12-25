@@ -21,7 +21,8 @@ public class RevisionService : IRevisionService
         return await db.Revisions
             .AsNoTracking()
             .Include(r => r.Changes)
-            .ThenInclude(c => c.WorkAspect)
+                .ThenInclude(c => c.WorkAspect)
+                    .ThenInclude(wa => wa.ChangeOrder) // Include ChangeOrder
             .Where(r => r.ContractID == contractId)
             .ToListAsync();
     }
@@ -67,7 +68,10 @@ public class RevisionService : IRevisionService
             {
                 WorkAspectID = wac.WorkAspect.WorkAspectID,
                 OldProgress = wac.OldProgress,
-                NewProgress = wac.NewProgress
+                NewProgress = wac.NewProgress,
+                WorkAspect = db.WorkAspects
+                    .Include(wa => wa.ChangeOrder) // Include ChangeOrder
+                    .FirstOrDefault(wa => wa.WorkAspectID == wac.WorkAspect.WorkAspectID)
             })
             .ToList();
 
@@ -84,7 +88,7 @@ public class RevisionService : IRevisionService
 
         contract.Revisions.Add(newRevision);
         contract.UpdateOverallProgress(); // Update overall progress in the contract
-        newRevision.CalculateAmountDue();
+        CalculateAmountDue(newRevision);
         contract.UpdateTotalPaid(); // Update total paid in the contract
         contract.TotalPaid -= newRevision.AmountDue;
         contract.DueBalance = contract.Amount - contract.TotalPaid;
@@ -92,6 +96,36 @@ public class RevisionService : IRevisionService
         db.Entry(contract).State = EntityState.Modified;
         await db.SaveChangesAsync();
     }
+
+    private void CalculateAmountDue(Revision newRevision)
+    {
+        decimal totalAmountDue = 0;
+
+        foreach (var change in newRevision.Changes)
+        {
+            if (change.WorkAspect.IsExtra)
+            {
+                // Calculate amount based on ChangeOrder amount
+                if (change.WorkAspect.ChangeOrder != null)
+                {
+                    decimal changeOrderAmount = change.WorkAspect.ChangeOrder.Amount;
+                    decimal progressDifference = change.NewProgress - change.OldProgress;
+                    totalAmountDue += changeOrderAmount * (progressDifference / 100);
+                }
+            }
+            else
+            {
+                // Calculate amount based on Contract amount and WorkAspect weight
+                decimal contractAmount = change.WorkAspect.Contract.Amount;
+                decimal workAspectWeight = change.WorkAspect.Weight;
+                decimal progressDifference = change.NewProgress - change.OldProgress;
+                totalAmountDue += contractAmount * (workAspectWeight / 100) * (progressDifference / 100);
+            }
+        }
+
+        newRevision.AmountDue = totalAmountDue;
+    }
+
 
     public async Task DeleteRevisionAsync(int contractId)
     {

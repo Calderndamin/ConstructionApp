@@ -34,6 +34,10 @@ namespace BlazorAppAttempt.Models
 
             foreach (var aspect in WorkAspects)
             {
+                if(aspect.IsExtra && aspect.ChangeOrder != null)
+                {
+                    continue;
+                }
                 totalWeightedProgress += aspect.Progress * aspect.Weight;
             }
             Progress = totalWeightedProgress / 100;
